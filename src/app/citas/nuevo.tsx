@@ -1,0 +1,516 @@
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { Input, Text } from "@rneui/themed";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { Colors } from "../../constants/colors";
+import { fs, sp } from "../../constants/responsive";
+import { citasService } from "../../services/citasService";
+import { Cliente, clientesService } from "../../services/clientesService";
+
+interface Servicio {
+  id_servicio: number;
+  nombre: string;
+  precio_base: number;
+}
+
+export default function NuevaCitaScreen() {
+  const router = useRouter();
+  const [guardando, setGuardando] = useState(false);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [servicios, setServicios] = useState<Servicio[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [form, setForm] = useState({
+    id_cliente: "",
+    id_servicio: "",
+    marca_vehiculo: "",
+    modelo_vehiculo: "",
+    anio_vehiculo: "",
+    fecha: "",
+    hora: "",
+    descripcion: "",
+    estado: "PENDIENTE",
+  });
+  const [errores, setErrores] = useState<Record<string, string>>({});
+  const [buscarCliente, setBuscarCliente] = useState("");
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const cargarDatos = async () => {
+    try {
+      setCargando(true);
+      const [cls, svcs] = await Promise.all([
+        clientesService.getAll(),
+        fetch("http://localhost:3001/api/servicios").then((r) => r.json()),
+      ]);
+      setClientes(cls);
+      setServicios(svcs);
+    } catch (e: any) {
+      Alert.alert("Error", e.message);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const set = (key: string) => (val: string) =>
+    setForm((f) => ({ ...f, [key]: val }));
+
+  const validar = () => {
+    const e: Record<string, string> = {};
+    if (!form.id_cliente) e.id_cliente = "Seleccione un cliente";
+    if (!form.id_servicio) e.id_servicio = "Seleccione un servicio";
+    if (!form.marca_vehiculo.trim()) e.marca_vehiculo = "Campo requerido";
+    if (!form.modelo_vehiculo.trim()) e.modelo_vehiculo = "Campo requerido";
+    if (!form.fecha.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(form.fecha))
+      e.fecha = "Formato inválido (YYYY-MM-DD)";
+    if (!form.hora.trim() || !/^\d{2}:\d{2}$/.test(form.hora))
+      e.hora = "Formato inválido (HH:MM)";
+    setErrores(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const guardar = async () => {
+    if (!validar()) return;
+    try {
+      setGuardando(true);
+      await citasService.crear({
+        id_cliente: Number(form.id_cliente),
+        id_servicio: Number(form.id_servicio),
+        marca_vehiculo: form.marca_vehiculo,
+        modelo_vehiculo: form.modelo_vehiculo,
+        anio_vehiculo: form.anio_vehiculo ? Number(form.anio_vehiculo) : null,
+        fecha: form.fecha,
+        hora: form.hora,
+        descripcion: form.descripcion || null,
+        estado: form.estado,
+      });
+      Alert.alert("Listo", "Cita registrada correctamente", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+    } catch (e: any) {
+      Alert.alert("Error", e.message);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const inputProps = (key: string) => ({
+    value: form[key as keyof typeof form],
+    onChangeText: set(key),
+    errorMessage: errores[key],
+    inputStyle: styles.inputText,
+    inputContainerStyle: errores[key]
+      ? styles.inputContainerError
+      : styles.inputContainer,
+    containerStyle: styles.inputWrapper,
+  });
+
+  const clientesFiltrados = clientes.filter((c) =>
+    `${c.nombre} ${c.apellido} ${c.identificacion}`
+      .toLowerCase()
+      .includes(buscarCliente.toLowerCase()),
+  );
+
+  if (cargando)
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.menuBtn}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.menuIcon}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>RETRO GARAGE</Text>
+          <View style={{ width: sp(40) }} />
+        </View>
+
+        <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.titleSection}>
+            <Text style={styles.title}>Nueva cita</Text>
+            <Text style={styles.subtitle}>Registrá una nueva cita</Text>
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Cliente */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>CLIENTE</Text>
+            <Input
+              placeholder="Buscar cliente..."
+              value={buscarCliente}
+              onChangeText={setBuscarCliente}
+              inputStyle={styles.inputText}
+              inputContainerStyle={styles.inputContainer}
+              containerStyle={styles.inputWrapper}
+            />
+            {errores.id_cliente ? (
+              <Text style={styles.errorText}>{errores.id_cliente}</Text>
+            ) : null}
+            <ScrollView style={styles.listBox} nestedScrollEnabled>
+              {clientesFiltrados.map((c) => (
+                <TouchableOpacity
+                  key={c.id_cliente}
+                  style={[
+                    styles.listItem,
+                    form.id_cliente === String(c.id_cliente) &&
+                      styles.listItemActive,
+                  ]}
+                  onPress={() => set("id_cliente")(String(c.id_cliente))}
+                >
+                  <Text
+                    style={[
+                      styles.listItemText,
+                      form.id_cliente === String(c.id_cliente) &&
+                        styles.listItemTextActive,
+                    ]}
+                  >
+                    {c.nombre} {c.apellido} — {c.identificacion}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Servicio */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>SERVICIO</Text>
+            {errores.id_servicio ? (
+              <Text style={styles.errorText}>{errores.id_servicio}</Text>
+            ) : null}
+            <View style={styles.serviciosGrid}>
+              {servicios.map((s) => (
+                <TouchableOpacity
+                  key={s.id_servicio}
+                  style={[
+                    styles.servicioBtn,
+                    form.id_servicio === String(s.id_servicio) &&
+                      styles.servicioBtnActive,
+                  ]}
+                  onPress={() => set("id_servicio")(String(s.id_servicio))}
+                >
+                  <Text
+                    style={[
+                      styles.servicioBtnText,
+                      form.id_servicio === String(s.id_servicio) &&
+                        styles.servicioBtnTextActive,
+                    ]}
+                  >
+                    {s.nombre}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.servicioPrecio,
+                      form.id_servicio === String(s.id_servicio) && {
+                        color: Colors.cream,
+                      },
+                    ]}
+                  >
+                    ₡{s.precio_base.toLocaleString()}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Vehículo */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>VEHÍCULO</Text>
+
+            <View style={styles.row}>
+              <View style={styles.halfField}>
+                <Text style={styles.fieldLabel}>
+                  MARCA <Text style={styles.req}>*</Text>
+                </Text>
+                <Input
+                  placeholder="Ej. Ford"
+                  {...inputProps("marca_vehiculo")}
+                />
+              </View>
+              <View style={styles.halfField}>
+                <Text style={styles.fieldLabel}>
+                  MODELO <Text style={styles.req}>*</Text>
+                </Text>
+                <Input
+                  placeholder="Ej. Mustang"
+                  {...inputProps("modelo_vehiculo")}
+                />
+              </View>
+            </View>
+
+            <Text style={styles.fieldLabel}>AÑO</Text>
+            <Input
+              placeholder="Ej. 1968"
+              keyboardType="numeric"
+              {...inputProps("anio_vehiculo")}
+            />
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Fecha y hora */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>FECHA Y HORA</Text>
+
+            <View style={styles.row}>
+              <View style={styles.halfField}>
+                <Text style={styles.fieldLabel}>
+                  FECHA <Text style={styles.req}>*</Text>
+                </Text>
+                <Input placeholder="YYYY-MM-DD" {...inputProps("fecha")} />
+              </View>
+              <View style={styles.halfField}>
+                <Text style={styles.fieldLabel}>
+                  HORA <Text style={styles.req}>*</Text>
+                </Text>
+                <Input placeholder="HH:MM" {...inputProps("hora")} />
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Estado */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>ESTADO</Text>
+            <View style={styles.estadosRow}>
+              {["PENDIENTE", "COMPLETADA", "CANCELADA"].map((e) => (
+                <TouchableOpacity
+                  key={e}
+                  style={[
+                    styles.estadoBtn,
+                    form.estado === e && styles.estadoBtnActive,
+                  ]}
+                  onPress={() => set("estado")(e)}
+                >
+                  <Text
+                    style={[
+                      styles.estadoBtnText,
+                      form.estado === e && styles.estadoBtnTextActive,
+                    ]}
+                  >
+                    {e}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Descripción */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>DESCRIPCIÓN</Text>
+            <Text style={styles.fieldLabel}>OBSERVACIONES</Text>
+            <Input
+              placeholder="Detalles adicionales..."
+              multiline
+              numberOfLines={3}
+              {...inputProps("descripcion")}
+              inputContainerStyle={[
+                styles.inputContainer,
+                { height: sp(80), alignItems: "flex-start" },
+              ]}
+            />
+          </View>
+
+          {/* Botones */}
+          <View style={styles.buttons}>
+            <TouchableOpacity
+              style={[
+                styles.fabBtn,
+                styles.fabGuardar,
+                guardando && styles.fabDisabled,
+              ]}
+              onPress={guardar}
+              disabled={guardando}
+            >
+              {guardando ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <MaterialIcons name="check" size={28} color="white" />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.fabBtn, styles.fabCancelar]}
+              onPress={() => router.back()}
+            >
+              <MaterialIcons name="close" size={28} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.footer}>© 2026 RETRO GARAGE</Text>
+        </ScrollView>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.cream },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+  header: {
+    backgroundColor: Colors.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: sp(16),
+    paddingVertical: sp(14),
+    paddingTop: sp(48),
+  },
+  menuBtn: { width: sp(40) },
+  menuIcon: { color: Colors.cream, fontSize: fs(20) },
+  headerTitle: {
+    color: Colors.cream,
+    fontSize: fs(14),
+    fontWeight: "600",
+    letterSpacing: 2,
+  },
+  scroll: { flex: 1, paddingHorizontal: sp(20) },
+  titleSection: { paddingVertical: sp(20) },
+  title: { fontSize: fs(22), fontWeight: "600", color: Colors.primary },
+  subtitle: { fontSize: fs(13), color: Colors.gray, marginTop: sp(4) },
+  divider: { height: 1, backgroundColor: Colors.border, marginVertical: sp(8) },
+  section: { paddingVertical: sp(16) },
+  sectionLabel: {
+    fontSize: fs(11),
+    fontWeight: "600",
+    color: Colors.gray,
+    letterSpacing: 1.5,
+    marginBottom: sp(12),
+  },
+  fieldLabel: {
+    fontSize: fs(11),
+    fontWeight: "600",
+    color: Colors.primary,
+    letterSpacing: 1,
+    marginBottom: sp(2),
+    marginLeft: sp(10),
+  },
+  req: { color: "#993C1D" },
+  errorText: {
+    fontSize: fs(12),
+    color: "#993C1D",
+    marginLeft: sp(10),
+    marginBottom: sp(8),
+  },
+  inputContainer: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: sp(6),
+    paddingHorizontal: sp(10),
+    backgroundColor: Colors.white,
+  },
+  inputContainerError: {
+    borderWidth: 1,
+    borderColor: "#993C1D",
+    borderRadius: sp(6),
+    paddingHorizontal: sp(10),
+    backgroundColor: Colors.white,
+  },
+  inputText: { fontSize: fs(14), color: Colors.primary },
+  inputWrapper: { paddingHorizontal: 0, marginBottom: sp(8) },
+  row: { flexDirection: "row", gap: sp(12) },
+  halfField: { flex: 1 },
+  listBox: {
+    maxHeight: sp(180),
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: sp(8),
+    backgroundColor: Colors.white,
+    marginBottom: sp(8),
+  },
+  listItem: {
+    paddingHorizontal: sp(14),
+    paddingVertical: sp(10),
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  listItemActive: { backgroundColor: Colors.primary },
+  listItemText: { fontSize: fs(13), color: Colors.primary },
+  listItemTextActive: { color: Colors.cream },
+  serviciosGrid: { flexDirection: "row", flexWrap: "wrap", gap: sp(8) },
+  servicioBtn: {
+    paddingHorizontal: sp(14),
+    paddingVertical: sp(10),
+    borderRadius: sp(8),
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.white,
+  },
+  servicioBtnActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  servicioBtnText: {
+    fontSize: fs(13),
+    color: Colors.primary,
+    fontWeight: "500",
+  },
+  servicioBtnTextActive: { color: Colors.cream },
+  servicioPrecio: { fontSize: fs(11), color: Colors.gray, marginTop: sp(2) },
+  estadosRow: { flexDirection: "row", gap: sp(8) },
+  estadoBtn: {
+    paddingHorizontal: sp(14),
+    paddingVertical: sp(8),
+    borderRadius: sp(20),
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.white,
+  },
+  estadoBtnActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  estadoBtnText: { fontSize: fs(12), color: Colors.primary, fontWeight: "600" },
+  estadoBtnTextActive: { color: Colors.cream },
+  buttons: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: sp(24),
+    marginTop: sp(8),
+    marginBottom: sp(32),
+  },
+  fabBtn: {
+    width: sp(64),
+    height: sp(64),
+    borderRadius: sp(32),
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 3,
+  },
+  fabGuardar: { backgroundColor: "#0F6E56" },
+  fabCancelar: { backgroundColor: "#C62828" },
+  fabDisabled: { backgroundColor: "#888" },
+  footer: {
+    textAlign: "center",
+    fontSize: fs(11),
+    color: Colors.gray,
+    marginBottom: sp(32),
+  },
+});

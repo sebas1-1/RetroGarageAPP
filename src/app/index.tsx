@@ -100,7 +100,7 @@ export default function DashboardScreen() {
         {/* Saludo */}
         <View style={styles.saludoSection}>
           <Text style={styles.saludo}>{saludo}</Text>
-          <Text style={styles.nombreUsuario}>José Rodríguez</Text>
+          <Text style={styles.nombreUsuario}>Pedro Navarro</Text>
           <Text style={styles.fecha}>{fechaStr}</Text>
         </View>
 

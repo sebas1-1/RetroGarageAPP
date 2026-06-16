@@ -104,6 +104,17 @@ export default function Layout() {
           ),
         }}
       />
+
+      <Tabs.Screen
+        name="servicios"
+        options={{
+          title: "Servicios",
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="build" size={size} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

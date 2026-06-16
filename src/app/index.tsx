@@ -1,39 +1,17 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Text } from "@rneui/themed";
-import { useRouter } from "expo-router";
-import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { Colors } from "../constants/colors";
 import { fs, screen, sp } from "../constants/responsive";
-
-const CITAS_HOY = [
-  {
-    id: 1,
-    hora: "9:00",
-    periodo: "AM",
-    vehiculo: "Ford Mustang 1968",
-    servicio: "Restauración de motor",
-    identificacion: "1-0123-4567",
-    cliente: "Carlos Méndez",
-  },
-  {
-    id: 2,
-    hora: "11:30",
-    periodo: "AM",
-    vehiculo: "Chevrolet Bel Air 1957",
-    servicio: "Pintura y carrocería",
-    identificacion: "2-0987-6543",
-    cliente: "Ana Rojas",
-  },
-  {
-    id: 3,
-    hora: "2:00",
-    periodo: "PM",
-    vehiculo: "Dodge Charger 1970",
-    servicio: "Mantenimiento general",
-    identificacion: "3-0321-1234",
-    cliente: "Luis Vargas",
-  },
-];
+import { Cita } from "../services/citasService";
 
 const ACCESOS = [
   { icon: "event", label: "Nueva cita", sub: "Agendar", ruta: "/citas/nuevo" },
@@ -55,10 +33,15 @@ const ACCESOS = [
     sub: "Ver reporte",
     ruta: "/estadisticas",
   },
+  { icon: "login", label: "Login", sub: "Ver pantalla", ruta: "/login" },
 ];
+
+const BASE_URL = "http://localhost:3001/api";
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const [citas, setCitas] = useState<Cita[]>([]);
+  const [cargando, setCargando] = useState(true);
 
   const hoy = new Date();
   const diasSemana = [
@@ -85,7 +68,6 @@ export default function DashboardScreen() {
     "diciembre",
   ];
   const fechaStr = `${diasSemana[hoy.getDay()]}, ${hoy.getDate()} de ${meses[hoy.getMonth()]} · ${hoy.getFullYear()}`;
-
   const hora = hoy.getHours();
   const saludo =
     hora < 12
@@ -94,6 +76,27 @@ export default function DashboardScreen() {
         ? "Buenas tardes,"
         : "Buenas noches,";
 
+  useFocusEffect(
+    useCallback(() => {
+      cargarCitas();
+    }, []),
+  );
+
+  const cargarCitas = async () => {
+    try {
+      setCargando(true);
+
+      const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
+      const data = await fetch(
+        `${BASE_URL}/citas?estado=PENDIENTE&fecha=${fechaHoy}`,
+      ).then((r) => r.json());
+      setCitas(data);
+    } catch (e) {
+      setCitas([]);
+    } finally {
+      setCargando(false);
+    }
+  };
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -122,27 +125,49 @@ export default function DashboardScreen() {
         {/* Citas de hoy */}
         <View style={styles.citasHeader}>
           <Text style={styles.sectionLabel}>CITAS DE HOY</Text>
-          <Text style={styles.citasCount}>{CITAS_HOY.length} citas</Text>
+          <Text style={styles.citasCount}>{citas.length} citas</Text>
         </View>
 
-        {CITAS_HOY.map((cita) => (
-          <View key={cita.id} style={styles.citaCard}>
-            <View style={styles.citaHoraBadge}>
-              <Text style={styles.citaHora}>{cita.hora}</Text>
-              <Text style={styles.citaPeriodo}>{cita.periodo}</Text>
-            </View>
-            <View style={styles.citaInfo}>
-              <Text style={styles.citaVehiculo}>{cita.vehiculo}</Text>
-              <Text style={styles.citaServicio}>{cita.servicio}</Text>
-              <Text style={styles.citaMeta}>
-                ID: {cita.identificacion} · {cita.cliente}
-              </Text>
-            </View>
-          </View>
-        ))}
+        {cargando ? (
+          <ActivityIndicator
+            color={Colors.primary}
+            style={{ marginTop: sp(20) }}
+          />
+        ) : citas.length === 0 ? (
+          <Text style={styles.citasVacias}>
+            No hay citas pendientes para hoy
+          </Text>
+        ) : (
+          citas.map((cita) => (
+            <TouchableOpacity
+              key={cita.id_cita}
+              style={styles.citaCard}
+              onPress={() =>
+                router.push({
+                  pathname: "/citas/editar",
+                  params: { id: cita.id_cita },
+                } as any)
+              }
+            >
+              <View style={styles.citaHoraBadge}>
+                <Text style={styles.citaHora}>
+                  {cita.hora ? cita.hora.substring(0, 5) : "--"}
+                </Text>
+              </View>
+              <View style={styles.citaInfo}>
+                <Text style={styles.citaVehiculo}>
+                  {cita.marca_vehiculo} {cita.modelo_vehiculo}
+                  {cita.anio_vehiculo ? ` ${cita.anio_vehiculo}` : ""}
+                </Text>
+                <Text style={styles.citaServicio}>{cita.servicio}</Text>
+                <Text style={styles.citaMeta}>{cita.cliente}</Text>
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
 
         {/* Accesos rápidos */}
-        <Text style={[styles.sectionLabel, { marginTop: 8 }]}>
+        <Text style={[styles.sectionLabel, { marginTop: sp(8) }]}>
           ACCESOS RÁPIDOS
         </Text>
         <View style={styles.accesosGrid}>
@@ -232,6 +257,12 @@ const styles = StyleSheet.create({
     marginBottom: sp(12),
   },
   citasCount: { fontSize: fs(12), color: Colors.gray },
+  citasVacias: {
+    textAlign: "center",
+    color: Colors.gray,
+    fontSize: fs(13),
+    marginVertical: sp(20),
+  },
   citaCard: {
     flexDirection: "row",
     backgroundColor: Colors.white,
@@ -250,8 +281,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  citaHora: { color: Colors.cream, fontSize: fs(15), fontWeight: "700" },
-  citaPeriodo: { color: "#B8B4D4", fontSize: fs(10) },
+  citaHora: { color: Colors.cream, fontSize: fs(13), fontWeight: "700" },
   citaInfo: { flex: 1, justifyContent: "center" },
   citaVehiculo: {
     fontSize: fs(15),

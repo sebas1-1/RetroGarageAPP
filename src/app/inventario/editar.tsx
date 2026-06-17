@@ -1,29 +1,31 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Input, Text } from "@rneui/themed";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { MessageDialog } from "../../components/shared/MessageDialog";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Categoria, categoriasService } from "../../services/categoriasService";
 import {
-  ProductoInput,
-  inventarioService,
+    ProductoInput,
+    inventarioService
 } from "../../services/inventarioService";
 
 const UNIDADES = ["Unidades", "Litros", "Metros"];
 
-export default function NuevoProductoScreen() {
+export default function EditarProductoScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [form, setForm] = useState({
@@ -51,15 +53,34 @@ export default function NuevoProductoScreen() {
   };
 
   useEffect(() => {
-    cargarCategorias();
+    cargarDatos();
   }, []);
 
-  const cargarCategorias = async () => {
+  const cargarDatos = async () => {
     try {
-      const data: Categoria[] = await categoriasService.getAll();
-      setCategorias(data.filter((c) => c.tipo === "Producto" && c.activo));
+      setCargando(true);
+      const [producto, cats] = await Promise.all([
+        inventarioService.getById(Number(id)),
+        categoriasService.getAll(),
+      ]);
+      setCategorias(
+        (cats as Categoria[]).filter((c) => c.tipo === "Producto" && c.activo),
+      );
+      setForm({
+        nombre: producto.nombre,
+        codigo_item: producto.codigo_item,
+        id_categoria: String(producto.id_categoria),
+        stock_actual: String(producto.stock_actual),
+        stock_minimo: String(producto.stock_minimo),
+        unidad_medida: producto.unidad_medida,
+        precio_venta: String(producto.precio_venta),
+        precio_costo: String(producto.precio_costo),
+        proveedor: producto.proveedor ?? "",
+      });
     } catch (e: any) {
       setMessageDialog({ title: "Error", message: e.message });
+    } finally {
+      setCargando(false);
     }
   };
 
@@ -68,7 +89,6 @@ export default function NuevoProductoScreen() {
 
   const validar = () => {
     const e: Record<string, string> = {};
-
     if (!form.nombre.trim()) e.nombre = "Campo requerido";
     if (!form.codigo_item.trim()) e.codigo_item = "Campo requerido";
     if (!form.id_categoria) e.id_categoria = "Seleccione una categoría";
@@ -80,7 +100,6 @@ export default function NuevoProductoScreen() {
       e.precio_venta = "Ingrese un número válido";
     if (!form.precio_costo || isNaN(Number(form.precio_costo)))
       e.precio_costo = "Ingrese un número válido";
-
     setErrores(e);
     return Object.keys(e).length === 0;
   };
@@ -100,10 +119,10 @@ export default function NuevoProductoScreen() {
         unidad_medida: form.unidad_medida,
         proveedor: form.proveedor.trim() || null,
       };
-      await inventarioService.crear(payload);
+      await inventarioService.editar(Number(id), payload);
       setMessageDialog({
         title: "Listo",
-        message: "Producto agregado correctamente",
+        message: "Producto actualizado correctamente",
         onClose: () => router.back(),
       });
     } catch (e: any) {
@@ -111,6 +130,21 @@ export default function NuevoProductoScreen() {
     } finally {
       setGuardando(false);
     }
+  };
+
+  const marcarAgotado = () => {
+    setMessageDialog({
+      title: "¿Marcar como agotado?",
+      message: "El stock se pondrá en 0. ¿Deseás continuar?",
+      onClose: async () => {
+        try {
+          await inventarioService.marcarAgotado(Number(id));
+          router.back();
+        } catch (e: any) {
+          setMessageDialog({ title: "Error", message: e.message });
+        }
+      },
+    });
   };
 
   const inputProps = (key: string) => ({
@@ -142,6 +176,14 @@ export default function NuevoProductoScreen() {
     return "NORMAL";
   };
 
+  if (cargando) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -162,9 +204,9 @@ export default function NuevoProductoScreen() {
 
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.titleSection}>
-            <Text style={styles.title}>Agregar nuevo ítem</Text>
+            <Text style={styles.title}>Editar ítem</Text>
             <Text style={styles.subtitle}>
-              Completa la información del producto
+              Modifica la información del producto
             </Text>
           </View>
 
@@ -196,48 +238,36 @@ export default function NuevoProductoScreen() {
                 <Text style={styles.fieldLabel}>
                   CATEGORÍA <Text style={styles.req}>*</Text>
                 </Text>
-                {categorias.length === 0 ? (
-                  <ActivityIndicator
-                    color={Colors.primary}
-                    style={{ marginTop: sp(12) }}
-                  />
-                ) : (
-                  <View style={styles.selectWrapper}>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                    >
-                      {categorias.map((c) => (
-                        <TouchableOpacity
-                          key={c.id_categoria}
+                <View style={styles.selectWrapper}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {categorias.map((c) => (
+                      <TouchableOpacity
+                        key={c.id_categoria}
+                        style={[
+                          styles.selectChip,
+                          form.id_categoria === String(c.id_categoria) &&
+                            styles.selectChipActive,
+                        ]}
+                        onPress={() =>
+                          set("id_categoria")(String(c.id_categoria))
+                        }
+                      >
+                        <Text
                           style={[
-                            styles.selectChip,
+                            styles.selectChipText,
                             form.id_categoria === String(c.id_categoria) &&
-                              styles.selectChipActive,
+                              styles.selectChipTextActive,
                           ]}
-                          onPress={() =>
-                            set("id_categoria")(String(c.id_categoria))
-                          }
                         >
-                          <Text
-                            style={[
-                              styles.selectChipText,
-                              form.id_categoria === String(c.id_categoria) &&
-                                styles.selectChipTextActive,
-                            ]}
-                          >
-                            {c.nombre}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                    {errores.id_categoria ? (
-                      <Text style={styles.errorText}>
-                        {errores.id_categoria}
-                      </Text>
-                    ) : null}
-                  </View>
-                )}
+                          {c.nombre}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  {errores.id_categoria ? (
+                    <Text style={styles.errorText}>{errores.id_categoria}</Text>
+                  ) : null}
+                </View>
               </View>
             </View>
           </View>
@@ -302,12 +332,7 @@ export default function NuevoProductoScreen() {
                 <View
                   style={[styles.dot, { backgroundColor: estadoColor() }]}
                 />
-                <View>
-                  <Text style={styles.estadoTitle}>Estado actual</Text>
-                  <Text style={styles.estadoHint}>
-                    Se calcula según la cantidad disponible y la mínima.
-                  </Text>
-                </View>
+                <Text style={styles.estadoTitle}>Estado actual</Text>
               </View>
               <View
                 style={[styles.estadoBadge, { borderColor: estadoColor() }]}
@@ -326,7 +351,6 @@ export default function NuevoProductoScreen() {
           {/* Precios */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>PRECIOS</Text>
-
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.fieldLabel}>
@@ -356,7 +380,6 @@ export default function NuevoProductoScreen() {
           {/* Proveedor */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>PROVEEDOR</Text>
-
             <Text style={styles.fieldLabel}>PROVEEDOR</Text>
             <Input
               placeholder="Ej: AutoParts CR"
@@ -364,7 +387,7 @@ export default function NuevoProductoScreen() {
             />
           </View>
 
-          {/* Botones */}
+          {/* Botones FAB */}
           <View style={styles.buttons}>
             <TouchableOpacity
               style={[
@@ -390,6 +413,12 @@ export default function NuevoProductoScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Marcar agotado */}
+          <TouchableOpacity style={styles.agotadoBtn} onPress={marcarAgotado}>
+            <MaterialIcons name="delete-outline" size={18} color="#C62828" />
+            <Text style={styles.agotadoBtnText}>Marcar como agotado</Text>
+          </TouchableOpacity>
+
           <Text style={styles.footer}>© 2026 RETRO GARAGE</Text>
         </ScrollView>
 
@@ -405,6 +434,12 @@ export default function NuevoProductoScreen() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: Colors.cream,
+  },
   container: { flex: 1, backgroundColor: Colors.cream },
   header: {
     backgroundColor: Colors.primary,
@@ -498,15 +533,9 @@ const styles = StyleSheet.create({
     marginTop: sp(4),
     backgroundColor: Colors.white,
   },
-  estadoLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: sp(10),
-    flex: 1,
-  },
+  estadoLeft: { flexDirection: "row", alignItems: "center", gap: sp(10) },
   dot: { width: sp(10), height: sp(10), borderRadius: sp(5) },
   estadoTitle: { fontSize: fs(13), fontWeight: "600", color: Colors.primary },
-  estadoHint: { fontSize: fs(11), color: Colors.gray, marginTop: sp(2) },
   estadoBadge: {
     paddingHorizontal: sp(10),
     paddingVertical: sp(4),
@@ -536,7 +565,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: sp(24),
     marginTop: sp(8),
-    marginBottom: sp(32),
+    marginBottom: sp(16),
   },
   fabBtn: {
     width: sp(64),
@@ -549,6 +578,24 @@ const styles = StyleSheet.create({
   fabGuardar: { backgroundColor: "#0F6E56" },
   fabCancelar: { backgroundColor: "#C62828" },
   fabDisabled: { backgroundColor: "#888" },
+  agotadoBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: sp(6),
+    borderWidth: 1,
+    borderColor: "#C62828",
+    borderRadius: sp(8),
+    paddingVertical: sp(12),
+    marginHorizontal: sp(20),
+    marginBottom: sp(16),
+    backgroundColor: Colors.white,
+  },
+  agotadoBtnText: {
+    fontSize: fs(13),
+    color: "#C62828",
+    fontWeight: "600",
+  },
   footer: {
     textAlign: "center",
     fontSize: fs(11),

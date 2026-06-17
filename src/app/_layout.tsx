@@ -20,9 +20,7 @@ export default function Layout() {
           fontWeight: "600",
           letterSpacing: 0.5,
         },
-        headerStyle: {
-          backgroundColor: Colors.primary,
-        },
+        headerStyle: { backgroundColor: Colors.primary },
         headerTintColor: Colors.cream,
         headerTitleStyle: { fontWeight: "600", letterSpacing: 2, fontSize: 14 },
         headerTitleAlign: "center",
@@ -43,7 +41,6 @@ export default function Layout() {
         options={{
           title: "Clientes",
           headerShown: false,
-          headerTitle: "RETRO GARAGE",
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="people" size={size} color={color} />
           ),
@@ -54,7 +51,6 @@ export default function Layout() {
         options={{
           title: "Inventario",
           headerShown: false,
-          headerTitle: "RETRO GARAGE",
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="inventory" size={size} color={color} />
           ),
@@ -65,7 +61,6 @@ export default function Layout() {
         options={{
           title: "Pagos",
           headerShown: false,
-          headerTitle: "RETRO GARAGE",
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="payments" size={size} color={color} />
           ),
@@ -76,22 +71,9 @@ export default function Layout() {
         options={{
           title: "Usuarios",
           headerShown: false,
-          headerTitle: "RETRO GARAGE",
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="manage-accounts" size={size} color={color} />
           ),
-        }}
-      />
-      <Tabs.Screen
-        name="ordenes"
-        options={{
-          title: "Órdenes",
-          headerShown: false,
-          headerTitle: "RETRO GARAGE",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="assignment" size={size} color={color} />
-          ),
-          href: null,
         }}
       />
       <Tabs.Screen
@@ -104,7 +86,6 @@ export default function Layout() {
           ),
         }}
       />
-
       <Tabs.Screen
         name="servicios"
         options={{
@@ -112,6 +93,26 @@ export default function Layout() {
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="build" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="Estadisticas"
+        options={{
+          title: "Estadísticas",
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="bar-chart" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="categorias"
+        options={{
+          title: "Categorías",
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="category" size={size} color={color} />
           ),
         }}
       />

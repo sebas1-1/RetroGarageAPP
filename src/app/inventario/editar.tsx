@@ -20,8 +20,10 @@ import {
     inventarioService
 } from "../../services/inventarioService";
 
+// Unidades que puede manejar un producto de inventario.
 const UNIDADES = ["Unidades", "Litros", "Metros"];
 
+// Pantalla para editar un producto ya registrado en inventario.
 export default function EditarProductoScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -52,10 +54,12 @@ export default function EditarProductoScreen() {
     onClose?.();
   };
 
+  // Carga producto y categorias cuando se recibe el id por la ruta.
   useEffect(() => {
     cargarDatos();
   }, []);
 
+  // Consulta la informacion necesaria para llenar el formulario.
   const cargarDatos = async () => {
     try {
       setCargando(true);
@@ -87,6 +91,7 @@ export default function EditarProductoScreen() {
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
 
+  // Valida que precios, stock y categoria tengan valores correctos.
   const validar = () => {
     const e: Record<string, string> = {};
     if (!form.nombre.trim()) e.nombre = "Campo requerido";
@@ -104,6 +109,7 @@ export default function EditarProductoScreen() {
     return Object.keys(e).length === 0;
   };
 
+  // Envia los cambios del producto al backend.
   const guardar = async () => {
     if (!validar()) return;
     try {
@@ -433,6 +439,7 @@ export default function EditarProductoScreen() {
   );
 }
 
+// Estilos visuales del formulario de editar producto.
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
@@ -451,9 +458,9 @@ const styles = StyleSheet.create({
     paddingTop: sp(48),
   },
   menuBtn: { width: sp(40) },
-  menuIcon: { color: Colors.cream, fontSize: fs(20) },
+  menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: Colors.cream,
+    color: "#FFFFFF",
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,

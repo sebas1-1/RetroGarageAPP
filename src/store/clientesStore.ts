@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { Cliente } from "../types";
 import { clientesService } from "../services/clientesService";
 
+// Estado global opcional para manejar clientes desde cualquier pantalla.
 interface ClientesStore {
   clientes: Cliente[];
   clienteSeleccionado: Cliente | null;
@@ -16,12 +17,14 @@ interface ClientesStore {
   limpiarError: () => void;
 }
 
+// Store de Zustand: guarda clientes, seleccionado, loader y errores.
 export const useClientesStore = create<ClientesStore>((set) => ({
   clientes: [],
   clienteSeleccionado: null,
   cargando: false,
   error: null,
 
+  // Carga todos los clientes y actualiza el arreglo principal.
   getClientes: async () => {
     set({ cargando: true, error: null });
     try {
@@ -32,6 +35,7 @@ export const useClientesStore = create<ClientesStore>((set) => ({
     }
   },
 
+  // Carga un cliente especifico y lo deja como seleccionado.
   getCliente: async (id) => {
     set({ cargando: true, error: null });
     try {
@@ -42,6 +46,7 @@ export const useClientesStore = create<ClientesStore>((set) => ({
     }
   },
 
+  // Crea un cliente usando el servicio de API.
   crearCliente: async (cliente) => {
     set({ cargando: true, error: null });
     try {
@@ -52,6 +57,7 @@ export const useClientesStore = create<ClientesStore>((set) => ({
     }
   },
 
+  // Actualiza un cliente existente.
   actualizarCliente: async (id, cliente) => {
     set({ cargando: true, error: null });
     try {
@@ -62,6 +68,7 @@ export const useClientesStore = create<ClientesStore>((set) => ({
     }
   },
 
+  // Elimina el cliente y lo quita del estado local.
   eliminarCliente: async (id) => {
     set({ cargando: true, error: null });
     try {
@@ -75,5 +82,6 @@ export const useClientesStore = create<ClientesStore>((set) => ({
     }
   },
 
+  // Limpia el mensaje de error actual.
   limpiarError: () => set({ error: null }),
 }));

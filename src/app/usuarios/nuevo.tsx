@@ -16,6 +16,7 @@ import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Rol, usuariosService } from "../../services/usuariosService";
 
+// Pantalla para crear un usuario administrativo.
 export default function NuevoUsuarioScreen() {
   const router = useRouter();
   const [guardando, setGuardando] = useState(false);
@@ -41,10 +42,12 @@ export default function NuevoUsuarioScreen() {
     onClose?.();
   };
 
+  // Carga roles disponibles para asignar permisos al usuario.
   useEffect(() => {
     cargarRoles();
   }, []);
 
+  // Consulta roles desde el backend para el selector.
   const cargarRoles = async () => {
     try {
       setRoles(await usuariosService.getRoles());
@@ -56,6 +59,7 @@ export default function NuevoUsuarioScreen() {
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
 
+  // Valida nombre, correo, rol y contrasena antes de crear.
   const validar = () => {
     const e: Record<string, string> = {};
 
@@ -81,6 +85,7 @@ export default function NuevoUsuarioScreen() {
     return Object.keys(e).length === 0;
   };
 
+  // Guarda el usuario nuevo en la base de datos.
   const guardar = async () => {
     if (!validar()) return;
     try {
@@ -277,6 +282,7 @@ export default function NuevoUsuarioScreen() {
   );
 }
 
+// Estilos visuales del formulario de nuevo usuario.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   header: {
@@ -289,9 +295,9 @@ const styles = StyleSheet.create({
     paddingTop: sp(48),
   },
   menuBtn: { width: sp(40) },
-  menuIcon: { color: Colors.cream, fontSize: fs(20) },
+  menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: Colors.cream,
+    color: "#FFFFFF",
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,

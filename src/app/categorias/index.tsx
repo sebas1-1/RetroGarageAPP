@@ -15,8 +15,10 @@ import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Categoria, categoriasService } from "../../services/categoriasService";
 
+// Tipos permitidos para clasificar una categoria.
 const TIPOS = ["Producto", "Servicio"] as const;
 
+// Pantalla para administrar categorias de productos y servicios.
 export default function CategoriasScreen() {
   const router = useRouter();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -29,12 +31,14 @@ export default function CategoriasScreen() {
   const [form, setForm] = useState({ nombre: "", tipo: "", descripcion: "" });
   const [errores, setErrores] = useState<Record<string, string>>({});
 
+  // Recarga categorias cada vez que el usuario vuelve a esta pantalla.
   useFocusEffect(
     useCallback(() => {
       cargar();
     }, []),
   );
 
+  // Trae las categorias desde el backend y maneja el estado de carga.
   const cargar = async () => {
     try {
       setCargando(true);
@@ -49,6 +53,7 @@ export default function CategoriasScreen() {
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
 
+  // Valida que el formulario tenga los datos minimos para guardar.
   const validar = () => {
     const e: Record<string, string> = {};
     if (!form.nombre.trim()) e.nombre = "Campo requerido";
@@ -57,6 +62,7 @@ export default function CategoriasScreen() {
     return Object.keys(e).length === 0;
   };
 
+  // Crea o actualiza una categoria dependiendo de si hay una seleccionada.
   const guardar = async () => {
     if (!validar()) return;
     try {
@@ -76,8 +82,10 @@ export default function CategoriasScreen() {
     }
   };
 
+  // Guarda temporalmente la categoria que el usuario quiere borrar.
   const confirmarEliminar = (cat: Categoria) => setCategoriaAEliminar(cat);
 
+  // Elimina la categoria confirmada y vuelve a cargar la lista.
   const eliminar = async (id: number) => {
     try {
       setEliminando(id);
@@ -292,6 +300,7 @@ export default function CategoriasScreen() {
   );
 }
 
+// Estilos visuales de categorias.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   header: {
@@ -304,9 +313,9 @@ const styles = StyleSheet.create({
     paddingTop: sp(48),
   },
   menuBtn: { width: sp(40) },
-  menuIcon: { color: Colors.cream, fontSize: fs(20) },
+  menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: Colors.cream,
+    color: "#FFFFFF",
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,

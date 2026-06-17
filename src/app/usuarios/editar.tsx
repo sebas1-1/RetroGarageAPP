@@ -16,6 +16,7 @@ import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Rol, usuariosService } from "../../services/usuariosService";
 
+// Pantalla para modificar un usuario administrativo existente.
 export default function EditarUsuarioScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -44,10 +45,12 @@ export default function EditarUsuarioScreen() {
     onClose?.();
   };
 
+  // Carga usuario y roles cuando recibe el id por la ruta.
   useEffect(() => {
     cargarDatos();
   }, [id]);
 
+  // Obtiene informacion actual para llenar el formulario.
   const cargarDatos = async () => {
     try {
       setCargando(true);
@@ -78,6 +81,7 @@ export default function EditarUsuarioScreen() {
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
 
+  // Valida datos del usuario antes de guardar cambios.
   const validar = () => {
     const e: Record<string, string> = {};
 
@@ -103,6 +107,7 @@ export default function EditarUsuarioScreen() {
     return Object.keys(e).length === 0;
   };
 
+  // Actualiza el usuario en el backend.
   const guardar = async () => {
     if (!validar()) return;
     try {
@@ -298,6 +303,7 @@ export default function EditarUsuarioScreen() {
   );
 }
 
+// Estilos visuales del formulario de editar usuario.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -311,9 +317,9 @@ const styles = StyleSheet.create({
     paddingTop: sp(48),
   },
   menuBtn: { width: sp(40) },
-  menuIcon: { color: Colors.cream, fontSize: fs(20) },
+  menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: Colors.cream,
+    color: "#FFFFFF",
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,

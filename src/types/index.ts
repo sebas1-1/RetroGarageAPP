@@ -1,4 +1,5 @@
 // ── SEGURIDAD ──────────────────────────────────
+// Seguridad: roles y usuarios administrativos.
 export interface Rol {
   id_rol: number;
   nombre: string;
@@ -18,6 +19,7 @@ export interface Usuario {
 }
 
 // ── CLIENTES ───────────────────────────────────
+// Clientes: informacion personal y de contacto.
 export interface Cliente {
   id_cliente: number;
   nombre: string;
@@ -34,6 +36,7 @@ export interface Cliente {
 }
 
 // ── CATÁLOGOS ──────────────────────────────────
+// Catalogos: categorias y servicios ofrecidos.
 export interface Categoria {
   id_categoria: number;
   nombre: string;
@@ -51,6 +54,7 @@ export interface Servicio {
 }
 
 // ── INVENTARIO ─────────────────────────────────
+// Inventario: productos o repuestos disponibles.
 export interface Producto {
   id_producto: number;
   id_categoria: number;
@@ -66,6 +70,7 @@ export interface Producto {
 }
 
 // ── CITAS ──────────────────────────────────────
+// Citas: agenda de trabajos para vehiculos.
 export interface Cita {
   id_cita: number;
   id_cliente: number;
@@ -81,6 +86,7 @@ export interface Cita {
 }
 
 // ── PAGOS ──────────────────────────────────────
+// Pagos: metodos, facturas y cobros.
 export interface MetodoPago {
   id_metodo: number;
   nombre: string;
@@ -105,6 +111,7 @@ export interface Pago {
 }
 
 // ── INVENTARIO MOVIMIENTOS ─────────────────────
+// Movimientos: entradas, salidas o ajustes de stock.
 export interface MovimientoInventario {
   id_movimiento: number;
   id_producto: number;

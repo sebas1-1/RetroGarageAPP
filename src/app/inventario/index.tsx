@@ -19,8 +19,10 @@ import {
   inventarioService,
 } from "../../services/inventarioService";
 
+// Filtros rapidos para separar productos por tipo visual.
 const FILTROS = ["TODOS", "REPUESTOS", "HERRAMIENTAS", "INSUMOS"];
 
+// Pantalla de inventario: lista productos, stock y acciones rapidas.
 export default function InventarioScreen() {
   const router = useRouter();
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -32,6 +34,7 @@ export default function InventarioScreen() {
     message: string;
   } | null>(null);
 
+  // Carga productos y permite distinguir entre carga inicial y refresh.
   const cargar = useCallback(async (esRefresh = false) => {
     try {
       esRefresh ? setRefrescando(true) : setCargando(true);
@@ -45,6 +48,7 @@ export default function InventarioScreen() {
     }
   }, []);
 
+  // Ejecuta la carga inicial al montar la pantalla.
   useEffect(() => {
     cargar();
   }, [cargar]);
@@ -238,6 +242,7 @@ export default function InventarioScreen() {
   );
 }
 
+// Estilos visuales del listado de inventario.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   header: {
@@ -250,9 +255,9 @@ const styles = StyleSheet.create({
     paddingTop: sp(48),
   },
   menuBtn: { width: sp(40) },
-  menuIcon: { color: Colors.cream, fontSize: fs(20) },
+  menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: Colors.cream,
+    color: "#FFFFFF",
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,

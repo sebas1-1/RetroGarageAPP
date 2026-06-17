@@ -13,16 +13,19 @@ import {
 import { Colors } from "../constants/colors";
 import { fs, sp } from "../constants/responsive";
 
+// Pantalla inicial: pide los datos de acceso antes de entrar al dashboard.
 export default function LoginScreen() {
   const router = useRouter();
+
+  // Guarda lo que el usuario escribe y si los campos estan activos.
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [correoFocused, setCorreoFocused] = useState(false);
   const [contrasenaFocused, setContrasenaFocused] = useState(false);
 
   const handleLogin = () => {
-    // TODO: autenticación real
-    router.replace("/" as any);
+    // Por ahora solo redirige; aqui se conectaria la autenticacion real.
+    router.replace("/dashboard" as any);
   };
 
   return (
@@ -106,6 +109,7 @@ export default function LoginScreen() {
   );
 }
 
+// Estilos visuales del login.
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -123,7 +127,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerTitle: {
-    color: Colors.cream,
+    color: "#FFFFFF",
     fontSize: fs(22),
     fontWeight: "700",
     letterSpacing: 6,

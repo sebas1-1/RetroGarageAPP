@@ -14,6 +14,7 @@ import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Servicio, serviciosService } from "../../services/serviciosService";
 
+// Pantalla de servicios: lista, busca, edita y elimina servicios del taller.
 export default function ServiciosScreen() {
   const router = useRouter();
 
@@ -29,12 +30,14 @@ export default function ServiciosScreen() {
     message: string;
   } | null>(null);
 
+  // Recarga servicios al entrar o volver desde formularios.
   useFocusEffect(
     useCallback(() => {
       cargarServicios();
     }, []),
   );
 
+  // Consulta servicios desde la API aplicando busqueda si existe.
   const cargarServicios = async (texto = "") => {
     try {
       setCargando(true);
@@ -46,6 +49,7 @@ export default function ServiciosScreen() {
     }
   };
 
+  // Elimina el servicio seleccionado y refresca la lista.
   const eliminarServicio = async () => {
     if (servicioAEliminar === null) return;
     try {
@@ -164,6 +168,7 @@ export default function ServiciosScreen() {
   );
 }
 
+// Estilos visuales del listado de servicios.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream, padding: sp(16) },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },

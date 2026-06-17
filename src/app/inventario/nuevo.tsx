@@ -20,8 +20,10 @@ import {
   inventarioService,
 } from "../../services/inventarioService";
 
+// Unidades que puede manejar un producto de inventario.
 const UNIDADES = ["Unidades", "Litros", "Metros"];
 
+// Pantalla para agregar un producto o repuesto al inventario.
 export default function NuevoProductoScreen() {
   const router = useRouter();
   const [guardando, setGuardando] = useState(false);
@@ -50,10 +52,12 @@ export default function NuevoProductoScreen() {
     onClose?.();
   };
 
+  // Carga categorias para que el producto pueda clasificarse.
   useEffect(() => {
     cargarCategorias();
   }, []);
 
+  // Consulta solo las categorias necesarias para el formulario.
   const cargarCategorias = async () => {
     try {
       const data: Categoria[] = await categoriasService.getAll();
@@ -66,6 +70,7 @@ export default function NuevoProductoScreen() {
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
 
+  // Valida nombre, categoria, precios y stock antes de guardar.
   const validar = () => {
     const e: Record<string, string> = {};
 
@@ -85,6 +90,7 @@ export default function NuevoProductoScreen() {
     return Object.keys(e).length === 0;
   };
 
+  // Crea el producto en la base de datos si el formulario es valido.
   const guardar = async () => {
     if (!validar()) return;
     try {
@@ -404,6 +410,7 @@ export default function NuevoProductoScreen() {
   );
 }
 
+// Estilos visuales del formulario de nuevo producto.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   header: {
@@ -416,9 +423,9 @@ const styles = StyleSheet.create({
     paddingTop: sp(48),
   },
   menuBtn: { width: sp(40) },
-  menuIcon: { color: Colors.cream, fontSize: fs(20) },
+  menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: Colors.cream,
+    color: "#FFFFFF",
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,

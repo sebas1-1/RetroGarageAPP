@@ -14,18 +14,21 @@ import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Cita, citasService } from "../../services/citasService";
 
+// Colores de texto segun el estado de la cita.
 const ESTADO_COLORS: Record<string, string> = {
   PENDIENTE: "#854F0B",
   COMPLETADA: "#0F6E56",
   CANCELADA: "#993C1D",
 };
 
+// Fondos suaves para las etiquetas de estado.
 const ESTADO_BG: Record<string, string> = {
   PENDIENTE: "#FEF3C7",
   COMPLETADA: "#D1FAE5",
   CANCELADA: "#FAECE7",
 };
 
+// Pantalla principal de citas: permite buscar, filtrar, editar y eliminar.
 export default function CitasScreen() {
   const router = useRouter();
 
@@ -40,12 +43,14 @@ export default function CitasScreen() {
     message: string;
   } | null>(null);
 
+  // Al volver a la pantalla se actualiza la lista de citas.
   useFocusEffect(
     useCallback(() => {
       cargarCitas();
     }, []),
   );
 
+  // Consulta citas segun texto de busqueda y estado seleccionado.
   const cargarCitas = async (texto = busqueda, estado = estadoFiltro) => {
     try {
       setCargando(true);
@@ -57,6 +62,7 @@ export default function CitasScreen() {
     }
   };
 
+  // Elimina la cita seleccionada despues de confirmar la accion.
   const eliminarCita = async () => {
     if (citaAEliminar === null) return;
     try {
@@ -231,6 +237,7 @@ export default function CitasScreen() {
   );
 }
 
+// Estilos visuales del listado de citas.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream, padding: sp(16) },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },

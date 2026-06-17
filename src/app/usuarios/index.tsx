@@ -13,6 +13,7 @@ import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Usuario, usuariosService } from "../../services/usuariosService";
 
+// Pantalla de usuarios: administra cuentas internas del sistema.
 export default function UsuariosScreen() {
   const router = useRouter();
 
@@ -26,12 +27,14 @@ export default function UsuariosScreen() {
     message: string;
   } | null>(null);
 
+  // Recarga usuarios al volver desde nuevo o editar.
   useFocusEffect(
     useCallback(() => {
       cargarUsuarios();
     }, []),
   );
 
+  // Consulta usuarios desde la API usando el filtro de busqueda.
   const cargarUsuarios = async (texto = "") => {
     try {
       setCargando(true);
@@ -43,6 +46,7 @@ export default function UsuariosScreen() {
     }
   };
 
+  // Elimina el usuario confirmado y actualiza la lista.
   const eliminarUsuario = async () => {
     if (usuarioAEliminar === null) return;
     try {
@@ -175,6 +179,7 @@ export default function UsuariosScreen() {
   );
 }
 
+// Estilos visuales del listado de usuarios.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream, padding: sp(16) },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },

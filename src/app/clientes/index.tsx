@@ -14,6 +14,7 @@ import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Cliente, clientesService } from "../../services/clientesService";
 
+// Pantalla de clientes: muestra, busca y permite eliminar registros.
 export default function ClientesScreen() {
   const router = useRouter();
 
@@ -29,12 +30,14 @@ export default function ClientesScreen() {
     message: string;
   } | null>(null);
 
+  // Recarga clientes al entrar o volver desde otra pantalla.
   useFocusEffect(
     useCallback(() => {
       cargarClientes();
     }, []),
   );
 
+  // Consulta clientes desde la API usando el texto de busqueda.
   const cargarClientes = async (texto = "") => {
     try {
       setCargando(true);
@@ -49,6 +52,7 @@ export default function ClientesScreen() {
     }
   };
 
+  // Borra el cliente confirmado y actualiza el listado.
   const eliminarCliente = async () => {
     if (clienteAEliminar === null) return;
 
@@ -208,6 +212,7 @@ export default function ClientesScreen() {
   );
 }
 
+// Estilos visuales del listado de clientes.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream, padding: sp(16) },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },

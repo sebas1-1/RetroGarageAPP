@@ -23,6 +23,7 @@ interface Servicio {
   precio_base: number;
 }
 
+// Pantalla para registrar una cita nueva en la agenda del taller.
 export default function NuevaCitaScreen() {
   const router = useRouter();
   const [guardando, setGuardando] = useState(false);
@@ -54,10 +55,12 @@ export default function NuevaCitaScreen() {
     onClose?.();
   };
 
+  // Al abrir la pantalla se cargan clientes y servicios disponibles.
   useEffect(() => {
     cargarDatos();
   }, []);
 
+  // Obtiene datos necesarios para llenar selectores del formulario.
   const cargarDatos = async () => {
     try {
       setCargando(true);
@@ -77,6 +80,7 @@ export default function NuevaCitaScreen() {
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
 
+  // Revisa campos obligatorios, formato de fecha y hora antes de guardar.
   const validar = () => {
     const e: Record<string, string> = {};
     if (!form.id_cliente) e.id_cliente = "Seleccione un cliente";
@@ -119,6 +123,7 @@ export default function NuevaCitaScreen() {
     return Object.keys(e).length === 0;
   };
 
+  // Envia la cita nueva al backend si la validacion es correcta.
   const guardar = async () => {
     if (!validar()) return;
     try {
@@ -419,6 +424,7 @@ export default function NuevaCitaScreen() {
   );
 }
 
+// Estilos visuales del formulario de nueva cita.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -432,9 +438,9 @@ const styles = StyleSheet.create({
     paddingTop: sp(48),
   },
   menuBtn: { width: sp(40) },
-  menuIcon: { color: Colors.cream, fontSize: fs(20) },
+  menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: Colors.cream,
+    color: "#FFFFFF",
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,

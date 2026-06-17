@@ -17,6 +17,7 @@ import { fs, sp } from "../../constants/responsive";
 import { Categoria, categoriasService } from "../../services/categoriasService";
 import { serviciosService } from "../../services/serviciosService";
 
+// Pantalla para crear un servicio nuevo con categoria y precio.
 export default function NuevoServicioScreen() {
   const router = useRouter();
   const [guardando, setGuardando] = useState(false);
@@ -40,10 +41,12 @@ export default function NuevoServicioScreen() {
     onClose?.();
   };
 
+  // Carga categorias para asociarlas al servicio.
   useEffect(() => {
     cargarCategorias();
   }, []);
 
+  // Consulta las categorias disponibles para el selector.
   const cargarCategorias = async () => {
     try {
       setCargando(true);
@@ -59,6 +62,7 @@ export default function NuevoServicioScreen() {
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
 
+  // Valida que el servicio tenga nombre, categoria y precio valido.
   const validar = () => {
     const e: Record<string, string> = {};
 
@@ -76,6 +80,7 @@ export default function NuevoServicioScreen() {
     return Object.keys(e).length === 0;
   };
 
+  // Guarda el servicio nuevo en el backend.
   const guardar = async () => {
     if (!validar()) return;
     try {
@@ -240,6 +245,7 @@ export default function NuevoServicioScreen() {
   );
 }
 
+// Estilos visuales del formulario de nuevo servicio.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -253,9 +259,9 @@ const styles = StyleSheet.create({
     paddingTop: sp(48),
   },
   menuBtn: { width: sp(40) },
-  menuIcon: { color: Colors.cream, fontSize: fs(20) },
+  menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: Colors.cream,
+    color: "#FFFFFF",
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,

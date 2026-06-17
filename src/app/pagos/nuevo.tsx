@@ -21,7 +21,9 @@ import {
   MetodoPago,
   pagosService,
 } from "../../services/pagosService";
+import { Servicio, serviciosService } from "../../services/serviciosService";
 
+// Bancos disponibles cuando el metodo de pago necesita referencia.
 const BANCOS = [
   "BCR",
   "BNCR",
@@ -32,28 +34,33 @@ const BANCOS = [
   "Promerica",
 ];
 
+// Pasos del flujo para que el pago se registre de forma ordenada.
 const PASO_TIPO = 1;
 const PASO_DETALLE = 2;
 const PASO_PAGO = 3;
 
+// Pantalla en pasos para registrar un pago ligado a cita o venta directa.
 export default function NuevoPagoScreen() {
   const router = useRouter();
+
+  // Paso actual del flujo y tipo de pago que eligio el usuario.
   const [paso, setPaso] = useState(PASO_TIPO);
   const [tipo, setTipo] = useState<"cita" | "directo" | null>(null);
 
-  // Cita
+  // Datos para buscar y seleccionar una cita pendiente.
   const [buscarCita, setBuscarCita] = useState("");
   const [citas, setCitas] = useState<Cita[]>([]);
   const [citaSeleccionada, setCitaSeleccionada] = useState<Cita | null>(null);
   const [buscandoCitas, setBuscandoCitas] = useState(false);
+  const [servicios, setServicios] = useState<Servicio[]>([]);
 
-  // Productos
+  // Datos para buscar productos y armar el carrito del pago.
   const [buscarProducto, setBuscarProducto] = useState("");
   const [productos, setProductos] = useState<Producto[]>([]);
   const [buscandoProductos, setBuscandoProductos] = useState(false);
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
 
-  // Pago
+  // Datos finales del metodo de pago y comprobante.
   const [metodos, setMetodos] = useState<MetodoPago[]>([]);
   const [metodoSeleccionado, setMetodoSeleccionado] =
     useState<MetodoPago | null>(null);
@@ -71,6 +78,7 @@ export default function NuevoPagoScreen() {
 
   const searchTimeout = useRef<any>(null);
 
+  // Al abrir la pantalla se cargan metodos, productos y servicios base.
   useEffect(() => {
     pagosService
       .getMetodos()
@@ -80,9 +88,13 @@ export default function NuevoPagoScreen() {
       .getAll()
       .then(setProductos)
       .catch(() => {});
+    serviciosService
+      .getAll()
+      .then((data) => setServicios(Array.isArray(data) ? data : []))
+      .catch(() => {});
   }, []);
 
-  // Buscar citas
+  // Busca citas con una pequena espera para no llamar la API en cada tecla.
   useEffect(() => {
     if (!buscarCita.trim()) {
       setCitas([]);
@@ -102,12 +114,14 @@ export default function NuevoPagoScreen() {
     }, 400);
   }, [buscarCita]);
 
+  // Filtra productos localmente por nombre o codigo.
   const productosFiltrados = productos.filter(
     (p) =>
       p.nombre.toLowerCase().includes(buscarProducto.toLowerCase()) ||
       p.codigo_item.toLowerCase().includes(buscarProducto.toLowerCase()),
   );
 
+  // Agrega un producto al carrito o aumenta su cantidad si ya existe.
   const agregarAlCarrito = (producto: Producto) => {
     setCarrito((prev) => {
       const existe = prev.find((i) => i.id_producto === producto.id_producto);
@@ -131,6 +145,7 @@ export default function NuevoPagoScreen() {
     });
   };
 
+  // Suma o resta unidades; si llega a cero se quita del carrito.
   const cambiarCantidad = (id: number, delta: number) => {
     setCarrito((prev) =>
       prev
@@ -141,22 +156,36 @@ export default function NuevoPagoScreen() {
     );
   };
 
+  // Obtiene el precio de la cita usando el dato de la cita o el servicio base.
+  const precioServicioCita = (cita: Cita) => {
+    const servicio = servicios.find((s) => s.id_servicio === cita.id_servicio);
+    return Number(cita.precio_base ?? servicio?.precio_base ?? 0);
+  };
+
+  const formatPrecioServicio = (monto: number) =>
+    monto > 0 ? `₡${monto.toLocaleString()}` : "Precio no disponible";
+
+  // Monto por servicio cuando el pago esta ligado a una cita.
   const montoServicio = citaSeleccionada
-    ? ((citaSeleccionada as any).precio_base ?? 0)
+    ? precioServicioCita(citaSeleccionada)
     : 0;
 
+  // Total de productos agregados al carrito.
   const montoProductos = carrito.reduce(
     (acc, i) => acc + i.precio_unitario * i.cantidad,
     0,
   );
 
+  // Total final a cobrar.
   const montoTotal = montoServicio + montoProductos;
 
+  // Cambio solo aplica cuando el metodo seleccionado es efectivo.
   const cambio =
     metodoSeleccionado?.nombre === "Efectivo" && montoRecibido
       ? Number(montoRecibido) - montoTotal
       : null;
 
+  // Reglas simples para habilitar avance entre pasos y confirmacion.
   const puedeAvanzarPaso1 = tipo !== null;
 
   const puedeAvanzarPaso2 =
@@ -164,17 +193,19 @@ export default function NuevoPagoScreen() {
 
   const puedeConfirmar =
     metodoSeleccionado !== null &&
+    montoTotal > 0 &&
     (metodoSeleccionado.nombre !== "Efectivo" ||
       (!!montoRecibido && Number(montoRecibido) >= montoTotal)) &&
     (metodoSeleccionado.nombre !== "Transferencia" || !!referencia);
 
+  // Envia el pago completo al backend y muestra el numero de factura.
   const confirmarPago = async () => {
     if (!puedeConfirmar) return;
     try {
       setGuardando(true);
       const result = await pagosService.registrar({
         id_cita: citaSeleccionada?.id_cita ?? null,
-        id_usuario: 1, // TODO: reemplazar con usuario de sesión
+        id_usuario: 1,
         id_metodo: metodoSeleccionado!.id_metodo,
         monto: montoTotal,
         monto_recibido:
@@ -408,6 +439,9 @@ export default function NuevoPagoScreen() {
                       <Text style={styles.citaFecha}>
                         {cita.fecha} {cita.hora}
                       </Text>
+                      <Text style={styles.citaPrecio}>
+                        Servicio: {formatPrecioServicio(precioServicioCita(cita))}
+                      </Text>
                     </TouchableOpacity>
                   ))}
 
@@ -447,6 +481,17 @@ export default function NuevoPagoScreen() {
                           {citaSeleccionada.servicio}
                         </Text>
                       </View>
+                      <View style={styles.citaResumenRow}>
+                        <MaterialIcons
+                          name="payments"
+                          size={16}
+                          color={Colors.gray}
+                        />
+                        <Text style={styles.citaResumenLabel}>Costo</Text>
+                        <Text style={styles.citaResumenVal}>
+                          {formatPrecioServicio(montoServicio)}
+                        </Text>
+                      </View>
                       <TouchableOpacity
                         style={styles.cambiarCitaBtn}
                         onPress={() => setCitaSeleccionada(null)}
@@ -482,7 +527,7 @@ export default function NuevoPagoScreen() {
                   inputContainerStyle={styles.inputContainer}
                   containerStyle={styles.inputWrapper}
                 />
-                {buscarProducto.trim() && (
+                {buscarProducto.trim() ? (
                   <View style={styles.productosList}>
                     {productosFiltrados.slice(0, 5).map((p) => (
                       <TouchableOpacity
@@ -510,7 +555,7 @@ export default function NuevoPagoScreen() {
                       <Text style={styles.sinResultados}>Sin resultados</Text>
                     )}
                   </View>
-                )}
+                ) : null}
 
                 {/* Carrito */}
                 {carrito.length > 0 && (
@@ -660,14 +705,14 @@ export default function NuevoPagoScreen() {
                     inputContainerStyle={styles.inputContainer}
                     containerStyle={styles.inputWrapper}
                   />
-                  {montoRecibido && Number(montoRecibido) >= montoTotal && (
+                  {montoRecibido && Number(montoRecibido) >= montoTotal ? (
                     <View style={styles.cambioBox}>
                       <Text style={styles.cambioLabel}>CAMBIO</Text>
                       <Text style={styles.cambioVal}>
                         ₡{(Number(montoRecibido) - montoTotal).toLocaleString()}
                       </Text>
                     </View>
-                  )}
+                  ) : null}
                 </View>
               )}
 
@@ -817,15 +862,13 @@ export default function NuevoPagoScreen() {
               {guardando ? (
                 <ActivityIndicator color="white" />
               ) : (
-                // ✅ Por esto
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: sp(8),
-                  }}
-                >
-                  <MaterialIcons name="receipt" size={16} color="white" />
+                <View style={styles.registrarBtnInner}>
+                  <MaterialIcons
+                    name="receipt"
+                    size={16}
+                    color="white"
+                    style={{ marginRight: sp(8) }}
+                  />
                   <Text style={styles.navBtnPrimarioText}>Registrar pago</Text>
                 </View>
               )}
@@ -844,6 +887,7 @@ export default function NuevoPagoScreen() {
   );
 }
 
+// Estilos visuales del formulario de pagos.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   header: {
@@ -856,9 +900,9 @@ const styles = StyleSheet.create({
     paddingTop: sp(48),
   },
   backBtn: { width: sp(40) },
-  backIcon: { color: Colors.cream, fontSize: fs(20) },
+  backIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: Colors.cream,
+    color: "#FFFFFF",
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,
@@ -942,7 +986,6 @@ const styles = StyleSheet.create({
   tipoCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: sp(14),
     backgroundColor: Colors.white,
     borderRadius: sp(10),
     borderWidth: 1,
@@ -961,6 +1004,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.15)",
     justifyContent: "center",
     alignItems: "center",
+    marginRight: sp(14),
   },
   tipoInfo: { flex: 1 },
   tipoLabel: { fontSize: fs(16), fontWeight: "600", color: Colors.primary },
@@ -979,6 +1023,12 @@ const styles = StyleSheet.create({
   citaNombre: { fontSize: fs(14), fontWeight: "600", color: Colors.primary },
   citaSub: { fontSize: fs(12), color: Colors.gray, marginTop: sp(2) },
   citaFecha: { fontSize: fs(11), color: Colors.gray, marginTop: sp(2) },
+  citaPrecio: {
+    fontSize: fs(12),
+    color: Colors.success,
+    fontWeight: "600",
+    marginTop: sp(4),
+  },
   citaResumen: {
     backgroundColor: Colors.white,
     borderRadius: sp(8),
@@ -990,12 +1040,16 @@ const styles = StyleSheet.create({
   citaResumenRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: sp(8),
     paddingVertical: sp(6),
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  citaResumenLabel: { fontSize: fs(12), color: Colors.gray, width: sp(70) },
+  citaResumenLabel: {
+    fontSize: fs(12),
+    color: Colors.gray,
+    width: sp(70),
+    marginLeft: sp(8),
+  },
   citaResumenVal: {
     fontSize: fs(13),
     fontWeight: "500",
@@ -1057,16 +1111,19 @@ const styles = StyleSheet.create({
     padding: sp(12),
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    gap: sp(8),
   },
-  carritoItemInfo: { flex: 1 },
+  carritoItemInfo: { flex: 1, marginRight: sp(8) },
   carritoItemNombre: {
     fontSize: fs(13),
     fontWeight: "600",
     color: Colors.primary,
   },
   carritoItemPrecio: { fontSize: fs(11), color: Colors.gray, marginTop: sp(2) },
-  cantidadRow: { flexDirection: "row", alignItems: "center", gap: sp(8) },
+  cantidadRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: sp(8),
+  },
   cantBtn: {
     width: sp(28),
     height: sp(28),
@@ -1084,6 +1141,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     minWidth: sp(20),
     textAlign: "center",
+    marginHorizontal: sp(8),
   },
   carritoItemTotal: {
     fontSize: fs(13),
@@ -1116,7 +1174,10 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   montoTotalVal: { fontSize: fs(18), fontWeight: "700", color: Colors.primary },
-  metodosRow: { flexDirection: "row", gap: sp(10), marginBottom: sp(16) },
+  metodosRow: {
+    flexDirection: "row",
+    marginBottom: sp(16),
+  },
   metodoCard: {
     flex: 1,
     backgroundColor: Colors.white,
@@ -1125,7 +1186,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     padding: sp(14),
     alignItems: "center",
-    gap: sp(6),
+    marginRight: sp(10),
   },
   metodoCardActive: {
     backgroundColor: Colors.primary,
@@ -1136,6 +1197,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: Colors.primary,
     textAlign: "center",
+    marginTop: sp(6),
   },
   metodoLabelActive: { color: Colors.cream },
   metodoBadge: {
@@ -1163,7 +1225,6 @@ const styles = StyleSheet.create({
   bancosRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: sp(8),
     marginLeft: sp(10),
     marginBottom: sp(8),
   },
@@ -1174,6 +1235,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: Colors.white,
+    marginRight: sp(8),
+    marginBottom: sp(8),
   },
   bancoChipActive: {
     backgroundColor: Colors.primary,
@@ -1189,7 +1252,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
-    gap: sp(12),
   },
   navBtnSecundario: {
     flex: 1,
@@ -1198,6 +1260,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     alignItems: "center",
+    marginRight: sp(12),
   },
   navBtnSecundarioText: {
     fontSize: fs(14),
@@ -1216,6 +1279,10 @@ const styles = StyleSheet.create({
     fontSize: fs(14),
     fontWeight: "600",
     color: Colors.cream,
+  },
+  registrarBtnInner: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   footer: {
     textAlign: "center",

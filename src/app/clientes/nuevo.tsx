@@ -15,6 +15,7 @@ import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { clientesService } from "../../services/clientesService";
 
+// Pantalla para registrar un cliente nuevo.
 export default function NuevoClienteScreen() {
   const router = useRouter();
   const [guardando, setGuardando] = useState(false);
@@ -45,6 +46,7 @@ export default function NuevoClienteScreen() {
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
 
+  // Valida datos personales y de contacto antes de crear el cliente.
   const validar = () => {
     const e: Record<string, string> = {};
 
@@ -83,6 +85,7 @@ export default function NuevoClienteScreen() {
     return Object.keys(e).length === 0;
   };
 
+  // Envia el cliente nuevo al backend si no hay errores.
   const guardar = async () => {
     console.log("presionado", form);
     if (!validar()) return;
@@ -278,6 +281,7 @@ export default function NuevoClienteScreen() {
   );
 }
 
+// Estilos visuales del formulario de nuevo cliente.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   header: {
@@ -290,9 +294,9 @@ const styles = StyleSheet.create({
     paddingTop: sp(48),
   },
   menuBtn: { width: sp(40) },
-  menuIcon: { color: Colors.cream, fontSize: fs(20) },
+  menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: Colors.cream,
+    color: "#FFFFFF",
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,

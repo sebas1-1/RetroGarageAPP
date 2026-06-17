@@ -10,12 +10,14 @@ type MessageDialogProps = {
   visible: boolean;
 };
 
+// Dialogo reutilizable para mostrar errores, confirmaciones o avisos simples.
 export function MessageDialog({
   title,
   message,
   onClose,
   visible,
 }: MessageDialogProps) {
+  // Se cierra al tocar fuera o al presionar OK.
   return (
     <Dialog isVisible={visible} onBackdropPress={onClose}>
       <Dialog.Title title={title} />
@@ -27,6 +29,7 @@ export function MessageDialog({
   );
 }
 
+// Estilos del mensaje dentro del dialogo.
 const styles = StyleSheet.create({
   message: { marginBottom: sp(20), color: Colors.primary },
 });

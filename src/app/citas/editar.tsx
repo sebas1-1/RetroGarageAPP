@@ -23,10 +23,12 @@ interface Servicio {
   precio_base: number;
 }
 
+// Pantalla para modificar una cita existente sin crear una nueva.
 export default function EditarCitaScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
+  // Estados de carga, listas auxiliares, formulario y mensajes.
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -50,6 +52,7 @@ export default function EditarCitaScreen() {
     onClose?: () => void;
   } | null>(null);
 
+  // Cierra el dialogo y ejecuta una accion extra si el mensaje la necesita.
   const closeMessageDialog = () => {
     const onClose = messageDialog?.onClose;
     setMessageDialog(null);
@@ -60,6 +63,7 @@ export default function EditarCitaScreen() {
     cargarDatos();
   }, [id]);
 
+  // Carga la cita actual junto con clientes y servicios para llenar el formulario.
   const cargarDatos = async () => {
     try {
       setCargando(true);
@@ -95,8 +99,11 @@ export default function EditarCitaScreen() {
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
 
+  // Revisa que los datos obligatorios esten completos y tengan formato correcto.
   const validar = () => {
     const e: Record<string, string> = {};
+
+    // Primero se validan los campos basicos requeridos.
     if (!form.id_cliente) e.id_cliente = "Seleccione un cliente";
     if (!form.id_servicio) e.id_servicio = "Seleccione un servicio";
     if (!form.marca_vehiculo.trim()) e.marca_vehiculo = "Campo requerido";
@@ -105,6 +112,7 @@ export default function EditarCitaScreen() {
     const fechaValida = /^\d{4}-\d{2}-\d{2}$/.test(form.fecha);
     const horaValida = /^\d{2}:\d{2}$/.test(form.hora);
 
+    // La fecha debe venir con formato YYYY-MM-DD y no puede ser del pasado.
     if (!form.fecha || !fechaValida) {
       e.fecha = "Formato inválido (YYYY-MM-DD)";
     } else {
@@ -117,6 +125,7 @@ export default function EditarCitaScreen() {
       }
     }
 
+    // La hora debe venir con formato HH:MM y, si es hoy, debe ser futura.
     if (!form.hora || !horaValida) {
       e.hora = "Formato inválido (HH:MM)";
     } else if (!e.fecha && form.fecha) {
@@ -133,10 +142,12 @@ export default function EditarCitaScreen() {
       }
     }
 
+    // Guarda los errores para pintarlos debajo de cada campo.
     setErrores(e);
     return Object.keys(e).length === 0;
   };
 
+  // Si la validacion pasa, envia los cambios de la cita al backend.
   const guardar = async () => {
     if (!validar()) return;
     try {
@@ -164,6 +175,7 @@ export default function EditarCitaScreen() {
     }
   };
 
+  // Centraliza las props de los inputs para no repetir estilos y errores.
   const inputProps = (key: string) => ({
     value: form[key as keyof typeof form],
     onChangeText: set(key),
@@ -175,6 +187,7 @@ export default function EditarCitaScreen() {
     containerStyle: styles.inputWrapper,
   });
 
+  // Filtra clientes mientras el usuario escribe en el buscador.
   const clientesFiltrados = clientes.filter((c) =>
     `${c.nombre} ${c.apellido} ${c.identificacion}`
       .toLowerCase()
@@ -434,6 +447,7 @@ export default function EditarCitaScreen() {
   );
 }
 
+// Estilos visuales del formulario de editar cita.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -447,9 +461,9 @@ const styles = StyleSheet.create({
     paddingTop: sp(48),
   },
   menuBtn: { width: sp(40) },
-  menuIcon: { color: Colors.cream, fontSize: fs(20) },
+  menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: Colors.cream,
+    color: "#FFFFFF",
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,

@@ -17,6 +17,7 @@ import { fs, sp } from "../../constants/responsive";
 import { Categoria, categoriasService } from "../../services/categoriasService";
 import { serviciosService } from "../../services/serviciosService";
 
+// Pantalla para modificar un servicio existente.
 export default function EditarServicioScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,10 +43,12 @@ export default function EditarServicioScreen() {
     onClose?.();
   };
 
+  // Carga servicio y categorias cuando llega el id por la ruta.
   useEffect(() => {
     cargarDatos();
   }, [id]);
 
+  // Obtiene datos actuales para llenar el formulario de edicion.
   const cargarDatos = async () => {
     try {
       setCargando(true);
@@ -73,6 +76,7 @@ export default function EditarServicioScreen() {
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
 
+  // Valida que nombre, categoria y precio esten correctos.
   const validar = () => {
     const e: Record<string, string> = {};
     if (!form.id_categoria) e.id_categoria = "Seleccione una categoría";
@@ -89,6 +93,7 @@ export default function EditarServicioScreen() {
     return Object.keys(e).length === 0;
   };
 
+  // Actualiza el servicio en la base de datos.
   const guardar = async () => {
     if (!validar()) return;
     try {
@@ -253,6 +258,7 @@ export default function EditarServicioScreen() {
   );
 }
 
+// Estilos visuales del formulario de editar servicio.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -266,9 +272,9 @@ const styles = StyleSheet.create({
     paddingTop: sp(48),
   },
   menuBtn: { width: sp(40) },
-  menuIcon: { color: Colors.cream, fontSize: fs(20) },
+  menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: Colors.cream,
+    color: "#FFFFFF",
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,

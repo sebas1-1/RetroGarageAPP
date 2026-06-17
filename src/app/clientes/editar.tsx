@@ -16,6 +16,7 @@ import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { clientesService } from "../../services/clientesService";
 
+// Pantalla para modificar los datos de un cliente existente.
 export default function EditarClienteScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -46,10 +47,12 @@ export default function EditarClienteScreen() {
     onClose?.();
   };
 
+  // Carga el cliente cuando llega el id por la ruta.
   useEffect(() => {
     cargarCliente();
   }, [id]);
 
+  // Obtiene el cliente desde la API y llena el formulario.
   const cargarCliente = async () => {
     try {
       setCargando(true);
@@ -81,6 +84,7 @@ export default function EditarClienteScreen() {
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
 
+  // Revisa que los campos importantes tengan datos validos.
   const validar = () => {
     const e: Record<string, string> = {};
 
@@ -126,6 +130,7 @@ export default function EditarClienteScreen() {
     return Object.keys(e).length === 0;
   };
 
+  // Guarda los cambios del cliente en el backend.
   const guardar = async () => {
     if (!validar()) return;
     try {
@@ -335,6 +340,7 @@ export default function EditarClienteScreen() {
   );
 }
 
+// Estilos visuales del formulario de editar cliente.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -348,9 +354,9 @@ const styles = StyleSheet.create({
     paddingTop: sp(48),
   },
   menuBtn: { width: sp(40) },
-  menuIcon: { color: Colors.cream, fontSize: fs(20) },
+  menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: Colors.cream,
+    color: "#FFFFFF",
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,

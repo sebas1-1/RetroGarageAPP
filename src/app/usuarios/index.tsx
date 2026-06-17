@@ -4,11 +4,11 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   StyleSheet,
   View,
 } from "react-native";
+import { MessageDialog } from "../../components/shared/MessageDialog";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Usuario, usuariosService } from "../../services/usuariosService";
@@ -21,6 +21,10 @@ export default function UsuariosScreen() {
   const [busqueda, setBusqueda] = useState("");
   const [usuarioAEliminar, setUsuarioAEliminar] = useState<number | null>(null);
   const [eliminando, setEliminando] = useState(false);
+  const [messageDialog, setMessageDialog] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -33,7 +37,7 @@ export default function UsuariosScreen() {
       setCargando(true);
       setUsuarios(await usuariosService.getAll(texto));
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      setMessageDialog({ title: "Error", message: e.message });
     } finally {
       setCargando(false);
     }
@@ -45,10 +49,16 @@ export default function UsuariosScreen() {
       setEliminando(true);
       await usuariosService.eliminar(usuarioAEliminar);
       setUsuarioAEliminar(null);
-      Alert.alert("Éxito", "Usuario eliminado correctamente");
+      setMessageDialog({
+        title: "Éxito",
+        message: "Usuario eliminado correctamente",
+      });
       await cargarUsuarios(busqueda);
     } catch (e: any) {
-      Alert.alert("Error", e.message || "No se pudo eliminar el usuario");
+      setMessageDialog({
+        title: "Error",
+        message: e.message || "No se pudo eliminar el usuario",
+      });
     } finally {
       setEliminando(false);
     }
@@ -154,6 +164,13 @@ export default function UsuariosScreen() {
           />
         </Dialog.Actions>
       </Dialog>
+
+      <MessageDialog
+        visible={messageDialog !== null}
+        title={messageDialog?.title ?? ""}
+        message={messageDialog?.message ?? ""}
+        onClose={() => setMessageDialog(null)}
+      />
     </View>
   );
 }

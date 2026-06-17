@@ -4,7 +4,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { MessageDialog } from "../../components/shared/MessageDialog";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { clientesService } from "../../services/clientesService";
@@ -34,6 +34,17 @@ export default function EditarClienteScreen() {
     notas: "",
   });
   const [errores, setErrores] = useState<Record<string, string>>({});
+  const [messageDialog, setMessageDialog] = useState<{
+    title: string;
+    message: string;
+    onClose?: () => void;
+  } | null>(null);
+
+  const closeMessageDialog = () => {
+    const onClose = messageDialog?.onClose;
+    setMessageDialog(null);
+    onClose?.();
+  };
 
   useEffect(() => {
     cargarCliente();
@@ -57,8 +68,11 @@ export default function EditarClienteScreen() {
         notas: data.notas ?? "",
       });
     } catch (e: any) {
-      Alert.alert("Error", e.message);
-      router.back();
+      setMessageDialog({
+        title: "Error",
+        message: e.message,
+        onClose: () => router.back(),
+      });
     } finally {
       setCargando(false);
     }
@@ -69,19 +83,45 @@ export default function EditarClienteScreen() {
 
   const validar = () => {
     const e: Record<string, string> = {};
+
     if (!form.nombre.trim()) e.nombre = "Campo requerido";
     if (!form.apellido.trim()) e.apellido = "Campo requerido";
+
+    // Identificación: solo validar formato, no se puede cambiar
     if (!form.identificacion.trim() || form.identificacion.length < 9)
-      e.identificacion = "Identificacion invalida o campo requerido";
-    if (!form.telefono.trim() || form.telefono.length < 8)
-      e.telefono = "Telefono invalido o campo requerido";
+      e.identificacion = "Identificación inválida o campo requerido";
+
+    // Teléfono: solo dígitos y longitud mínima
+    const telefonoLimpio = form.telefono.replace(/\D/g, "");
+    if (!form.telefono.trim() || telefonoLimpio.length < 8)
+      e.telefono = "Teléfono inválido o campo requerido";
+
+    // Correo: formato válido
     if (form.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo))
       e.correo = "Correo electrónico inválido";
-    if (
-      form.fecha_nacimiento &&
-      !/^\d{4}-\d{2}-\d{2}$/.test(form.fecha_nacimiento)
-    )
-      e.fecha_nacimiento = "Formato de fecha inválido (YYYY-MM-DD)";
+
+    // Fecha de nacimiento: formato, no futura, edad razonable
+    if (form.fecha_nacimiento) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(form.fecha_nacimiento)) {
+        e.fecha_nacimiento = "Formato inválido (YYYY-MM-DD)";
+      } else {
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const nacimiento = new Date(form.fecha_nacimiento + "T00:00:00");
+        const edadAnios =
+          (hoy.getTime() - nacimiento.getTime()) /
+          (1000 * 60 * 60 * 24 * 365.25);
+
+        if (nacimiento >= hoy) {
+          e.fecha_nacimiento = "La fecha no puede ser hoy ni en el futuro";
+        } else if (edadAnios < 1) {
+          e.fecha_nacimiento = "La fecha no parece válida";
+        } else if (edadAnios > 120) {
+          e.fecha_nacimiento = "La fecha no parece válida";
+        }
+      }
+    }
+
     setErrores(e);
     return Object.keys(e).length === 0;
   };
@@ -101,11 +141,13 @@ export default function EditarClienteScreen() {
         canton: form.canton || null,
         notas: form.notas || null,
       });
-      Alert.alert("Listo", "Cliente actualizado correctamente", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      setMessageDialog({
+        title: "Listo",
+        message: "Cliente actualizado correctamente",
+        onClose: () => router.back(),
+      });
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      setMessageDialog({ title: "Error", message: e.message });
     } finally {
       setGuardando(false);
     }
@@ -173,12 +215,18 @@ export default function EditarClienteScreen() {
               </View>
             </View>
 
+            {/* Identificación bloqueada */}
             <Text style={styles.fieldLabel}>
               IDENTIFICACIÓN <Text style={styles.req}>*</Text>
             </Text>
             <Input
               placeholder="Ej. 1-1234-5678"
               {...inputProps("identificacion")}
+              disabled={true}
+              inputContainerStyle={[
+                styles.inputContainer,
+                styles.inputDisabled,
+              ]}
             />
 
             <Text style={styles.fieldLabel}>FECHA DE NACIMIENTO</Text>
@@ -242,10 +290,7 @@ export default function EditarClienteScreen() {
                 errores["notas"]
                   ? styles.inputContainerError
                   : styles.inputContainer,
-                {
-                  height: 80,
-                  alignItems: "flex-start",
-                },
+                { height: 80, alignItems: "flex-start" },
               ]}
             />
           </View>
@@ -278,6 +323,13 @@ export default function EditarClienteScreen() {
 
           <Text style={styles.footer}>© 2026 RETRO GARAGE</Text>
         </ScrollView>
+
+        <MessageDialog
+          visible={messageDialog !== null}
+          title={messageDialog?.title ?? ""}
+          message={messageDialog?.message ?? ""}
+          onClose={closeMessageDialog}
+        />
       </View>
     </KeyboardAvoidingView>
   );
@@ -340,6 +392,11 @@ const styles = StyleSheet.create({
     borderRadius: sp(6),
     paddingHorizontal: sp(10),
     backgroundColor: Colors.white,
+  },
+  // 👇 Nuevo estilo para campo deshabilitado
+  inputDisabled: {
+    backgroundColor: Colors.border,
+    opacity: 0.6,
   },
   inputText: { fontSize: fs(14), color: Colors.primary },
   inputWrapper: { paddingHorizontal: 0, marginBottom: sp(8) },

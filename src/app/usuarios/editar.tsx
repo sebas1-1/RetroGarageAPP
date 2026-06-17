@@ -4,7 +4,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { MessageDialog } from "../../components/shared/MessageDialog";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Rol, usuariosService } from "../../services/usuariosService";
@@ -32,6 +32,17 @@ export default function EditarUsuarioScreen() {
     confirmar: "",
   });
   const [errores, setErrores] = useState<Record<string, string>>({});
+  const [messageDialog, setMessageDialog] = useState<{
+    title: string;
+    message: string;
+    onClose?: () => void;
+  } | null>(null);
+
+  const closeMessageDialog = () => {
+    const onClose = messageDialog?.onClose;
+    setMessageDialog(null);
+    onClose?.();
+  };
 
   useEffect(() => {
     cargarDatos();
@@ -54,8 +65,11 @@ export default function EditarUsuarioScreen() {
         confirmar: "",
       });
     } catch (e: any) {
-      Alert.alert("Error", e.message);
-      router.back();
+      setMessageDialog({
+        title: "Error",
+        message: e.message,
+        onClose: () => router.back(),
+      });
     } finally {
       setCargando(false);
     }
@@ -66,14 +80,25 @@ export default function EditarUsuarioScreen() {
 
   const validar = () => {
     const e: Record<string, string> = {};
+
     if (!form.id_rol) e.id_rol = "Seleccione un rol";
+
     if (!form.nombre_completo.trim()) e.nombre_completo = "Campo requerido";
+
     if (!form.correo.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo))
       e.correo = "Correo inválido";
-    if (form.contrasena && form.contrasena.length < 6)
-      e.contrasena = "Mínimo 6 caracteres";
-    if (form.contrasena && form.contrasena !== form.confirmar)
-      e.confirmar = "Las contraseñas no coinciden";
+
+    if (form.contrasena) {
+      if (form.contrasena.length < 6) e.contrasena = "Mínimo 6 caracteres";
+      else if (!/[A-Z]/.test(form.contrasena))
+        e.contrasena = "Debe tener al menos una mayúscula";
+      else if (!/[0-9]/.test(form.contrasena))
+        e.contrasena = "Debe tener al menos un número";
+
+      if (form.contrasena !== form.confirmar)
+        e.confirmar = "Las contraseñas no coinciden";
+    }
+
     setErrores(e);
     return Object.keys(e).length === 0;
   };
@@ -89,11 +114,13 @@ export default function EditarUsuarioScreen() {
         telefono: form.telefono || null,
         contrasena: form.contrasena || undefined,
       });
-      Alert.alert("Listo", "Usuario actualizado correctamente", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      setMessageDialog({
+        title: "Listo",
+        message: "Usuario actualizado correctamente",
+        onClose: () => router.back(),
+      });
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      setMessageDialog({ title: "Error", message: e.message });
     } finally {
       setGuardando(false);
     }
@@ -259,6 +286,13 @@ export default function EditarUsuarioScreen() {
 
           <Text style={styles.footer}>© 2026 RETRO GARAGE</Text>
         </ScrollView>
+
+        <MessageDialog
+          visible={messageDialog !== null}
+          title={messageDialog?.title ?? ""}
+          message={messageDialog?.message ?? ""}
+          onClose={closeMessageDialog}
+        />
       </View>
     </KeyboardAvoidingView>
   );

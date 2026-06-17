@@ -3,18 +3,19 @@ import { Input, Text } from "@rneui/themed";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { MessageDialog } from "../../components/shared/MessageDialog";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
-import { Categoria, serviciosService } from "../../services/serviciosService";
+import { Categoria, categoriasService } from "../../services/categoriasService";
+import { serviciosService } from "../../services/serviciosService";
 
 export default function EditarServicioScreen() {
   const router = useRouter();
@@ -29,6 +30,17 @@ export default function EditarServicioScreen() {
     precio_base: "",
   });
   const [errores, setErrores] = useState<Record<string, string>>({});
+  const [messageDialog, setMessageDialog] = useState<{
+    title: string;
+    message: string;
+    onClose?: () => void;
+  } | null>(null);
+
+  const closeMessageDialog = () => {
+    const onClose = messageDialog?.onClose;
+    setMessageDialog(null);
+    onClose?.();
+  };
 
   useEffect(() => {
     cargarDatos();
@@ -39,17 +51,20 @@ export default function EditarServicioScreen() {
       setCargando(true);
       const [servicio, cats] = await Promise.all([
         serviciosService.getById(Number(id)),
-        serviciosService.getCategorias(),
+        categoriasService.getAll() as Promise<Categoria[]>,
       ]);
-      setCategorias(cats);
+      setCategorias(cats.filter((categoria) => categoria.tipo === "Servicio"));
       setForm({
         id_categoria: String(servicio.id_categoria),
         nombre: servicio.nombre ?? "",
         precio_base: String(servicio.precio_base) ?? "0",
       });
     } catch (e: any) {
-      Alert.alert("Error", e.message);
-      router.back();
+      setMessageDialog({
+        title: "Error",
+        message: e.message,
+        onClose: () => router.back(),
+      });
     } finally {
       setCargando(false);
     }
@@ -61,9 +76,15 @@ export default function EditarServicioScreen() {
   const validar = () => {
     const e: Record<string, string> = {};
     if (!form.id_categoria) e.id_categoria = "Seleccione una categoría";
+
     if (!form.nombre.trim()) e.nombre = "Campo requerido";
-    if (!form.precio_base || isNaN(Number(form.precio_base)))
+
+    if (!form.precio_base || isNaN(Number(form.precio_base))) {
       e.precio_base = "Precio inválido";
+    } else if (Number(form.precio_base) <= 0) {
+      e.precio_base = "El precio debe ser mayor a 0";
+    }
+
     setErrores(e);
     return Object.keys(e).length === 0;
   };
@@ -77,11 +98,13 @@ export default function EditarServicioScreen() {
         nombre: form.nombre,
         precio_base: Number(form.precio_base),
       });
-      Alert.alert("Listo", "Servicio actualizado correctamente", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      setMessageDialog({
+        title: "Listo",
+        message: "Servicio actualizado correctamente",
+        onClose: () => router.back(),
+      });
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      setMessageDialog({ title: "Error", message: e.message });
     } finally {
       setGuardando(false);
     }
@@ -137,27 +160,33 @@ export default function EditarServicioScreen() {
               <Text style={styles.errorText}>{errores.id_categoria}</Text>
             ) : null}
             <View style={styles.categoriasGrid}>
-              {categorias.map((c) => (
-                <TouchableOpacity
-                  key={c.id_categoria}
-                  style={[
-                    styles.categoriaBtn,
-                    form.id_categoria === String(c.id_categoria) &&
-                      styles.categoriaBtnActive,
-                  ]}
-                  onPress={() => set("id_categoria")(String(c.id_categoria))}
-                >
-                  <Text
+              {categorias.length === 0 ? (
+                <Text style={styles.emptyCategorias}>
+                  No hay categorías de servicio registradas
+                </Text>
+              ) : (
+                categorias.map((c) => (
+                  <TouchableOpacity
+                    key={c.id_categoria}
                     style={[
-                      styles.categoriaBtnText,
+                      styles.categoriaBtn,
                       form.id_categoria === String(c.id_categoria) &&
-                        styles.categoriaBtnTextActive,
+                        styles.categoriaBtnActive,
                     ]}
+                    onPress={() => set("id_categoria")(String(c.id_categoria))}
                   >
-                    {c.nombre}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={[
+                        styles.categoriaBtnText,
+                        form.id_categoria === String(c.id_categoria) &&
+                          styles.categoriaBtnTextActive,
+                      ]}
+                    >
+                      {c.nombre}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
             </View>
           </View>
 
@@ -212,6 +241,13 @@ export default function EditarServicioScreen() {
 
           <Text style={styles.footer}>© 2026 RETRO GARAGE</Text>
         </ScrollView>
+
+        <MessageDialog
+          visible={messageDialog !== null}
+          title={messageDialog?.title ?? ""}
+          message={messageDialog?.message ?? ""}
+          onClose={closeMessageDialog}
+        />
       </View>
     </KeyboardAvoidingView>
   );
@@ -266,6 +302,7 @@ const styles = StyleSheet.create({
     marginBottom: sp(8),
   },
   categoriasGrid: { flexDirection: "row", flexWrap: "wrap", gap: sp(8) },
+  emptyCategorias: { color: Colors.gray, fontSize: fs(13) },
   categoriaBtn: {
     paddingHorizontal: sp(14),
     paddingVertical: sp(8),

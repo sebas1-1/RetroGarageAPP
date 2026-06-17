@@ -34,6 +34,12 @@ const ACCESOS = [
     ruta: "/estadisticas",
   },
   { icon: "login", label: "Login", sub: "Ver pantalla", ruta: "/login" },
+  {
+    icon: "category",
+    label: "Categorías",
+    sub: "Administrar categorías",
+    ruta: "/categorias",
+  },
 ];
 
 const BASE_URL = "http://localhost:3001/api";

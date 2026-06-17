@@ -4,12 +4,12 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
     ActivityIndicator,
-    Alert,
     FlatList,
     StyleSheet,
     TouchableOpacity,
     View,
 } from "react-native";
+import { MessageDialog } from "../../components/shared/MessageDialog";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Servicio, serviciosService } from "../../services/serviciosService";
@@ -24,6 +24,10 @@ export default function ServiciosScreen() {
     null,
   );
   const [eliminando, setEliminando] = useState(false);
+  const [messageDialog, setMessageDialog] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -36,7 +40,7 @@ export default function ServiciosScreen() {
       setCargando(true);
       setServicios(await serviciosService.getAll(texto));
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      setMessageDialog({ title: "Error", message: e.message });
     } finally {
       setCargando(false);
     }
@@ -48,10 +52,13 @@ export default function ServiciosScreen() {
       setEliminando(true);
       await serviciosService.eliminar(servicioAEliminar);
       setServicioAEliminar(null);
-      Alert.alert("Éxito", "Servicio eliminado correctamente");
+      setMessageDialog({
+        title: "Éxito",
+        message: "Servicio eliminado correctamente",
+      });
       await cargarServicios(busqueda);
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      setMessageDialog({ title: "Error", message: e.message });
     } finally {
       setEliminando(false);
     }
@@ -146,6 +153,13 @@ export default function ServiciosScreen() {
           />
         </Dialog.Actions>
       </Dialog>
+
+      <MessageDialog
+        visible={messageDialog !== null}
+        title={messageDialog?.title ?? ""}
+        message={messageDialog?.message ?? ""}
+        onClose={() => setMessageDialog(null)}
+      />
     </View>
   );
 }

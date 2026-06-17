@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { MessageDialog } from "../../components/shared/MessageDialog";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { citasService } from "../../services/citasService";
@@ -42,6 +42,17 @@ export default function NuevaCitaScreen() {
   });
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [buscarCliente, setBuscarCliente] = useState("");
+  const [messageDialog, setMessageDialog] = useState<{
+    title: string;
+    message: string;
+    onClose?: () => void;
+  } | null>(null);
+
+  const closeMessageDialog = () => {
+    const onClose = messageDialog?.onClose;
+    setMessageDialog(null);
+    onClose?.();
+  };
 
   useEffect(() => {
     cargarDatos();
@@ -57,7 +68,7 @@ export default function NuevaCitaScreen() {
       setClientes(cls);
       setServicios(svcs);
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      setMessageDialog({ title: "Error", message: e.message });
     } finally {
       setCargando(false);
     }
@@ -72,10 +83,38 @@ export default function NuevaCitaScreen() {
     if (!form.id_servicio) e.id_servicio = "Seleccione un servicio";
     if (!form.marca_vehiculo.trim()) e.marca_vehiculo = "Campo requerido";
     if (!form.modelo_vehiculo.trim()) e.modelo_vehiculo = "Campo requerido";
-    if (!form.fecha.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(form.fecha))
+
+    const fechaValida = /^\d{4}-\d{2}-\d{2}$/.test(form.fecha);
+    const horaValida = /^\d{2}:\d{2}$/.test(form.hora);
+
+    if (!form.fecha || !fechaValida) {
       e.fecha = "Formato inválido (YYYY-MM-DD)";
-    if (!form.hora.trim() || !/^\d{2}:\d{2}$/.test(form.hora))
+    } else {
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const fechaCita = new Date(form.fecha + "T00:00:00");
+
+      if (fechaCita < hoy) {
+        e.fecha = "La fecha no puede ser anterior a hoy";
+      }
+    }
+
+    if (!form.hora || !horaValida) {
       e.hora = "Formato inválido (HH:MM)";
+    } else if (!e.fecha && form.fecha) {
+      const ahora = new Date();
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const fechaCita = new Date(form.fecha + "T00:00:00");
+      const [hh, mm] = form.hora.split(":").map(Number);
+      const horaCita = new Date(form.fecha + `T${form.hora}:00`);
+
+      // Solo comparar hora si la cita es hoy
+      if (fechaCita.getTime() === hoy.getTime() && horaCita <= ahora) {
+        e.hora = "La hora debe ser posterior a la hora actual";
+      }
+    }
+
     setErrores(e);
     return Object.keys(e).length === 0;
   };
@@ -95,11 +134,13 @@ export default function NuevaCitaScreen() {
         descripcion: form.descripcion || null,
         estado: form.estado,
       });
-      Alert.alert("Listo", "Cita registrada correctamente", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      setMessageDialog({
+        title: "Listo",
+        message: "Cita registrada correctamente",
+        onClose: () => router.back(),
+      });
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      setMessageDialog({ title: "Error", message: e.message });
     } finally {
       setGuardando(false);
     }
@@ -366,6 +407,13 @@ export default function NuevaCitaScreen() {
 
           <Text style={styles.footer}>© 2026 RETRO GARAGE</Text>
         </ScrollView>
+
+        <MessageDialog
+          visible={messageDialog !== null}
+          title={messageDialog?.title ?? ""}
+          message={messageDialog?.message ?? ""}
+          onClose={closeMessageDialog}
+        />
       </View>
     </KeyboardAvoidingView>
   );

@@ -3,15 +3,15 @@ import { Input, Text } from "@rneui/themed";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { MessageDialog } from "../../components/shared/MessageDialog";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { citasService } from "../../services/citasService";
@@ -44,6 +44,17 @@ export default function EditarCitaScreen() {
     estado: "PENDIENTE",
   });
   const [errores, setErrores] = useState<Record<string, string>>({});
+  const [messageDialog, setMessageDialog] = useState<{
+    title: string;
+    message: string;
+    onClose?: () => void;
+  } | null>(null);
+
+  const closeMessageDialog = () => {
+    const onClose = messageDialog?.onClose;
+    setMessageDialog(null);
+    onClose?.();
+  };
 
   useEffect(() => {
     cargarDatos();
@@ -71,8 +82,11 @@ export default function EditarCitaScreen() {
         estado: cita.estado ?? "PENDIENTE",
       });
     } catch (e: any) {
-      Alert.alert("Error", e.message);
-      router.back();
+      setMessageDialog({
+        title: "Error",
+        message: e.message,
+        onClose: () => router.back(),
+      });
     } finally {
       setCargando(false);
     }
@@ -87,10 +101,38 @@ export default function EditarCitaScreen() {
     if (!form.id_servicio) e.id_servicio = "Seleccione un servicio";
     if (!form.marca_vehiculo.trim()) e.marca_vehiculo = "Campo requerido";
     if (!form.modelo_vehiculo.trim()) e.modelo_vehiculo = "Campo requerido";
-    if (!form.fecha || !/^\d{4}-\d{2}-\d{2}$/.test(form.fecha))
+
+    const fechaValida = /^\d{4}-\d{2}-\d{2}$/.test(form.fecha);
+    const horaValida = /^\d{2}:\d{2}$/.test(form.hora);
+
+    if (!form.fecha || !fechaValida) {
       e.fecha = "Formato inválido (YYYY-MM-DD)";
-    if (!form.hora || !/^\d{2}:\d{2}$/.test(form.hora))
+    } else {
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const fechaCita = new Date(form.fecha + "T00:00:00");
+
+      if (fechaCita < hoy) {
+        e.fecha = "La fecha no puede ser anterior a hoy";
+      }
+    }
+
+    if (!form.hora || !horaValida) {
       e.hora = "Formato inválido (HH:MM)";
+    } else if (!e.fecha && form.fecha) {
+      const ahora = new Date();
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const fechaCita = new Date(form.fecha + "T00:00:00");
+      const [hh, mm] = form.hora.split(":").map(Number);
+      const horaCita = new Date(form.fecha + `T${form.hora}:00`);
+
+      // Solo comparar hora si la cita es hoy
+      if (fechaCita.getTime() === hoy.getTime() && horaCita <= ahora) {
+        e.hora = "La hora debe ser posterior a la hora actual";
+      }
+    }
+
     setErrores(e);
     return Object.keys(e).length === 0;
   };
@@ -110,11 +152,13 @@ export default function EditarCitaScreen() {
         descripcion: form.descripcion || null,
         estado: form.estado,
       });
-      Alert.alert("Listo", "Cita actualizada correctamente", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      setMessageDialog({
+        title: "Listo",
+        message: "Cita actualizada correctamente",
+        onClose: () => router.back(),
+      });
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      setMessageDialog({ title: "Error", message: e.message });
     } finally {
       setGuardando(false);
     }
@@ -378,6 +422,13 @@ export default function EditarCitaScreen() {
 
           <Text style={styles.footer}>© 2026 RETRO GARAGE</Text>
         </ScrollView>
+
+        <MessageDialog
+          visible={messageDialog !== null}
+          title={messageDialog?.title ?? ""}
+          message={messageDialog?.message ?? ""}
+          onClose={closeMessageDialog}
+        />
       </View>
     </KeyboardAvoidingView>
   );

@@ -4,13 +4,13 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
+import { MessageDialog } from "../../components/shared/MessageDialog";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { clientesService } from "../../services/clientesService";
@@ -30,25 +30,55 @@ export default function NuevoClienteScreen() {
     notas: "",
   });
   const [errores, setErrores] = useState<Record<string, string>>({});
+  const [messageDialog, setMessageDialog] = useState<{
+    title: string;
+    message: string;
+    onClose?: () => void;
+  } | null>(null);
+
+  const closeMessageDialog = () => {
+    const onClose = messageDialog?.onClose;
+    setMessageDialog(null);
+    onClose?.();
+  };
 
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
 
   const validar = () => {
     const e: Record<string, string> = {};
+
     if (!form.nombre.trim()) e.nombre = "Campo requerido";
     if (!form.apellido.trim()) e.apellido = "Campo requerido";
+
     if (!form.identificacion.trim() || form.identificacion.length < 9)
-      e.identificacion = "Campo valido requerido";
-    if (!form.telefono.trim() || form.telefono.length < 8)
-      e.telefono = "Telefono invalido o campo requerido";
-    if (
-      form.fecha_nacimiento &&
-      !/^\d{4}-\d{2}-\d{2}$/.test(form.fecha_nacimiento)
-    )
-      e.fecha_nacimiento = "Formato de fecha inválido (YYYY-MM-DD)";
+      e.identificacion = "Campo válido requerido";
+
+    const telefonoLimpio = form.telefono.replace(/\D/g, "");
+    if (!form.telefono.trim() || telefonoLimpio.length < 8)
+      e.telefono = "Teléfono inválido o campo requerido";
+
     if (form.correo.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo))
       e.correo = "Correo no válido";
+
+    if (form.fecha_nacimiento) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(form.fecha_nacimiento)) {
+        e.fecha_nacimiento = "Formato inválido (YYYY-MM-DD)";
+      } else {
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const nacimiento = new Date(form.fecha_nacimiento + "T00:00:00");
+        const edadAnios =
+          (hoy.getTime() - nacimiento.getTime()) /
+          (1000 * 60 * 60 * 24 * 365.25);
+
+        if (nacimiento >= hoy)
+          e.fecha_nacimiento = "La fecha no puede ser hoy ni en el futuro";
+        else if (edadAnios < 1 || edadAnios > 120)
+          e.fecha_nacimiento = "La fecha no parece válida";
+      }
+    }
+
     setErrores(e);
     return Object.keys(e).length === 0;
   };
@@ -69,11 +99,13 @@ export default function NuevoClienteScreen() {
         canton: form.canton || null,
         notas: form.notas || null,
       });
-      Alert.alert("Listo", "Cliente registrado correctamente", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      setMessageDialog({
+        title: "Listo",
+        message: "Cliente registrado correctamente",
+        onClose: () => router.back(),
+      });
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      setMessageDialog({ title: "Error", message: e.message });
     } finally {
       setGuardando(false);
     }
@@ -234,6 +266,13 @@ export default function NuevoClienteScreen() {
 
           <Text style={styles.footer}>© 2026 RETRO GARAGE</Text>
         </ScrollView>
+
+        <MessageDialog
+          visible={messageDialog !== null}
+          title={messageDialog?.title ?? ""}
+          message={messageDialog?.message ?? ""}
+          onClose={closeMessageDialog}
+        />
       </View>
     </KeyboardAvoidingView>
   );

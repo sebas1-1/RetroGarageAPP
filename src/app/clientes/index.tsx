@@ -4,12 +4,12 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   StyleSheet,
   View,
 } from "react-native";
 
+import { MessageDialog } from "../../components/shared/MessageDialog";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Cliente, clientesService } from "../../services/clientesService";
@@ -24,6 +24,10 @@ export default function ClientesScreen() {
 
   const [clienteAEliminar, setClienteAEliminar] = useState<number | null>(null);
   const [eliminando, setEliminando] = useState(false);
+  const [messageDialog, setMessageDialog] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -39,7 +43,7 @@ export default function ClientesScreen() {
 
       setClientes(data);
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      setMessageDialog({ title: "Error", message: e.message });
     } finally {
       setCargando(false);
     }
@@ -55,11 +59,17 @@ export default function ClientesScreen() {
 
       setClienteAEliminar(null);
 
-      Alert.alert("Éxito", "Cliente eliminado correctamente");
+      setMessageDialog({
+        title: "Éxito",
+        message: "Cliente eliminado correctamente",
+      });
 
       await cargarClientes(busqueda);
     } catch (e: any) {
-      Alert.alert("Error", e.message || "No se pudo eliminar el cliente");
+      setMessageDialog({
+        title: "Error",
+        message: e.message || "No se pudo eliminar el cliente",
+      });
     } finally {
       setEliminando(false);
     }
@@ -187,6 +197,13 @@ export default function ClientesScreen() {
           />
         </Dialog.Actions>
       </Dialog>
+
+      <MessageDialog
+        visible={messageDialog !== null}
+        title={messageDialog?.title ?? ""}
+        message={messageDialog?.message ?? ""}
+        onClose={() => setMessageDialog(null)}
+      />
     </View>
   );
 }

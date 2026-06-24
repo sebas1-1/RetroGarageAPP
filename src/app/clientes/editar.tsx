@@ -11,10 +11,26 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { DatePickerField } from "../../components/shared/DatePickerField";
 import { MessageDialog } from "../../components/shared/MessageDialog";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
+import { Auto, AutoInput, autosService } from "../../services/autosService";
 import { clientesService } from "../../services/clientesService";
+
+type AutoForm = {
+  marca: string;
+  modelo: string;
+  anio: string;
+  placa: string;
+};
+
+const nuevoAuto = (): AutoForm => ({
+  marca: "",
+  modelo: "",
+  anio: "",
+  placa: "",
+});
 
 // Pantalla para modificar los datos de un cliente existente.
 export default function EditarClienteScreen() {
@@ -34,6 +50,7 @@ export default function EditarClienteScreen() {
     canton: "",
     notas: "",
   });
+  const [autos, setAutos] = useState<AutoForm[]>([]);
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [messageDialog, setMessageDialog] = useState<{
     title: string;
@@ -47,6 +64,10 @@ export default function EditarClienteScreen() {
     onClose?.();
   };
 
+  const yesterday = new Date();
+  yesterday.setHours(0, 0, 0, 0);
+  yesterday.setDate(yesterday.getDate() - 1);
+
   // Carga el cliente cuando llega el id por la ruta.
   useEffect(() => {
     cargarCliente();
@@ -57,10 +78,11 @@ export default function EditarClienteScreen() {
     try {
       setCargando(true);
       const data = await clientesService.getById(Number(id));
+      const identificacion = data.identificacion ?? "";
       setForm({
         nombre: data.nombre ?? "",
         apellido: data.apellido ?? "",
-        identificacion: data.identificacion ?? "",
+        identificacion,
         fecha_nacimiento: data.fecha_nacimiento
           ? data.fecha_nacimiento.split("T")[0]
           : "",
@@ -70,6 +92,22 @@ export default function EditarClienteScreen() {
         canton: data.canton ?? "",
         notas: data.notas ?? "",
       });
+
+      try {
+        const autosData: Auto[] = await autosService.getByIdentificacion(
+          identificacion,
+        );
+        setAutos(
+          autosData.map((auto) => ({
+            marca: auto.marca ?? "",
+            modelo: auto.modelo ?? "",
+            anio: auto.anio ?? "",
+            placa: auto.placa ?? "",
+          })),
+        );
+      } catch {
+        setAutos([]);
+      }
     } catch (e: any) {
       setMessageDialog({
         title: "Error",
@@ -83,6 +121,29 @@ export default function EditarClienteScreen() {
 
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
+
+  const setAuto = (index: number, key: keyof AutoForm) => (val: string) =>
+    setAutos((actuales) =>
+      actuales.map((auto, i) =>
+        i === index ? { ...auto, [key]: val } : auto,
+      ),
+    );
+
+  const agregarAuto = () => setAutos((actuales) => [...actuales, nuevoAuto()]);
+
+  const quitarAuto = (index: number) =>
+    setAutos((actuales) => actuales.filter((_, i) => i !== index));
+
+  const autosParaGuardar = (): AutoInput[] =>
+    autos
+      .map((auto) => ({
+        identificacion: form.identificacion.trim(),
+        marca: auto.marca.trim() || null,
+        modelo: auto.modelo.trim() || null,
+        anio: auto.anio.trim() || null,
+        placa: auto.placa.trim() || null,
+      }))
+      .filter((auto) => auto.marca || auto.modelo || auto.anio || auto.placa);
 
   // Revisa que los campos importantes tengan datos validos.
   const validar = () => {
@@ -103,6 +164,18 @@ export default function EditarClienteScreen() {
     // Correo: formato válido
     if (form.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo))
       e.correo = "Correo electrónico inválido";
+
+    autos.forEach((auto, index) => {
+      const tieneDatos =
+        auto.marca.trim() ||
+        auto.modelo.trim() ||
+        auto.anio.trim() ||
+        auto.placa.trim();
+
+      if (!tieneDatos) {
+        e[`auto_${index}`] = "Completá el auto o eliminá esta fila";
+      }
+    });
 
     // Fecha de nacimiento: formato, no futura, edad razonable
     if (form.fecha_nacimiento) {
@@ -146,6 +219,12 @@ export default function EditarClienteScreen() {
         canton: form.canton || null,
         notas: form.notas || null,
       });
+
+      await autosService.reemplazarPorIdentificacion(
+        form.identificacion,
+        autosParaGuardar(),
+      );
+
       setMessageDialog({
         title: "Listo",
         message: "Cliente actualizado correctamente",
@@ -235,9 +314,12 @@ export default function EditarClienteScreen() {
             />
 
             <Text style={styles.fieldLabel}>FECHA DE NACIMIENTO</Text>
-            <Input
-              placeholder="YYYY-MM-DD"
-              {...inputProps("fecha_nacimiento")}
+            <DatePickerField
+              value={form.fecha_nacimiento}
+              onChange={set("fecha_nacimiento")}
+              errorMessage={errores.fecha_nacimiento}
+              maximumDate={yesterday}
+              allowClear
             />
           </View>
 
@@ -276,6 +358,90 @@ export default function EditarClienteScreen() {
 
             <Text style={styles.fieldLabel}>CANTÓN / CIUDAD</Text>
             <Input placeholder="Ej. Escazú" {...inputProps("canton")} />
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Autos */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>AUTOS</Text>
+              <TouchableOpacity style={styles.addBtn} onPress={agregarAuto}>
+                <MaterialIcons name="add" size={18} color={Colors.cream} />
+                <Text style={styles.addBtnText}>Agregar auto</Text>
+              </TouchableOpacity>
+            </View>
+
+            {autos.length === 0 ? (
+              <Text style={styles.emptyText}>Sin autos agregados</Text>
+            ) : null}
+
+            {autos.map((auto, index) => (
+              <View key={index} style={styles.autoBox}>
+                <View style={styles.autoHeader}>
+                  <Text style={styles.autoTitle}>Auto {index + 1}</Text>
+                  <TouchableOpacity onPress={() => quitarAuto(index)}>
+                    <MaterialIcons name="delete-outline" size={22} color="#993C1D" />
+                  </TouchableOpacity>
+                </View>
+
+                {errores[`auto_${index}`] ? (
+                  <Text style={styles.errorText}>{errores[`auto_${index}`]}</Text>
+                ) : null}
+
+                <View style={styles.row}>
+                  <View style={styles.halfField}>
+                    <Text style={styles.fieldLabel}>MARCA</Text>
+                    <Input
+                      placeholder="Ej. Toyota"
+                      value={auto.marca}
+                      onChangeText={setAuto(index, "marca")}
+                      inputStyle={styles.inputText}
+                      inputContainerStyle={styles.inputContainer}
+                      containerStyle={styles.inputWrapper}
+                    />
+                  </View>
+                  <View style={styles.halfField}>
+                    <Text style={styles.fieldLabel}>MODELO</Text>
+                    <Input
+                      placeholder="Ej. Corolla"
+                      value={auto.modelo}
+                      onChangeText={setAuto(index, "modelo")}
+                      inputStyle={styles.inputText}
+                      inputContainerStyle={styles.inputContainer}
+                      containerStyle={styles.inputWrapper}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.row}>
+                  <View style={styles.halfField}>
+                    <Text style={styles.fieldLabel}>AÑO</Text>
+                    <Input
+                      placeholder="Ej. 1985"
+                      value={auto.anio}
+                      onChangeText={setAuto(index, "anio")}
+                      keyboardType="numeric"
+                      inputStyle={styles.inputText}
+                      inputContainerStyle={styles.inputContainer}
+                      containerStyle={styles.inputWrapper}
+                    />
+                  </View>
+                  <View style={styles.halfField}>
+                    <Text style={styles.fieldLabel}>PLACA</Text>
+                    <Input
+                      placeholder="Ej. ABC123"
+                      value={auto.placa}
+                      onChangeText={setAuto(index, "placa")}
+                      autoCapitalize="characters"
+                      inputStyle={styles.inputText}
+                      inputContainerStyle={styles.inputContainer}
+                      containerStyle={styles.inputWrapper}
+                    />
+                  </View>
+                </View>
+              </View>
+            ))}
           </View>
 
           <View style={styles.divider} />
@@ -374,6 +540,13 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginBottom: sp(12),
   },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: sp(12),
+    marginBottom: sp(12),
+  },
   fieldLabel: {
     fontSize: fs(11),
     fontWeight: "600",
@@ -383,6 +556,51 @@ const styles = StyleSheet.create({
     marginLeft: sp(10),
   },
   req: { color: "#993C1D" },
+  addBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: sp(4),
+    backgroundColor: Colors.primary,
+    borderRadius: sp(6),
+    paddingHorizontal: sp(10),
+    paddingVertical: sp(8),
+  },
+  addBtnText: {
+    color: Colors.cream,
+    fontSize: fs(12),
+    fontWeight: "600",
+  },
+  emptyText: {
+    color: Colors.gray,
+    fontSize: fs(13),
+    marginLeft: sp(10),
+    marginBottom: sp(8),
+  },
+  autoBox: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: sp(8),
+    backgroundColor: Colors.white,
+    padding: sp(12),
+    marginBottom: sp(12),
+  },
+  autoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: sp(8),
+  },
+  autoTitle: {
+    color: Colors.primary,
+    fontSize: fs(13),
+    fontWeight: "600",
+  },
+  errorText: {
+    fontSize: fs(12),
+    color: "#993C1D",
+    marginLeft: sp(10),
+    marginBottom: sp(8),
+  },
   row: { flexDirection: "row", gap: sp(12) },
   halfField: { flex: 1 },
   inputContainer: {

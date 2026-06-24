@@ -11,9 +11,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { DatePickerField } from "../../components/shared/DatePickerField";
 import { MessageDialog } from "../../components/shared/MessageDialog";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
+import { Auto, autosService } from "../../services/autosService";
 import { citasService } from "../../services/citasService";
 import { Cliente, clientesService } from "../../services/clientesService";
 
@@ -33,6 +35,8 @@ export default function EditarCitaScreen() {
   const [guardando, setGuardando] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [servicios, setServicios] = useState<Servicio[]>([]);
+  const [autosCliente, setAutosCliente] = useState<Auto[]>([]);
+  const [cargandoAutos, setCargandoAutos] = useState(false);
   const [buscarCliente, setBuscarCliente] = useState("");
   const [form, setForm] = useState({
     id_cliente: "",
@@ -59,6 +63,9 @@ export default function EditarCitaScreen() {
     onClose?.();
   };
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   useEffect(() => {
     cargarDatos();
   }, [id]);
@@ -67,11 +74,11 @@ export default function EditarCitaScreen() {
   const cargarDatos = async () => {
     try {
       setCargando(true);
-      const [cita, cls, svcs] = await Promise.all([
+      const [cita, cls, svcs] = (await Promise.all([
         citasService.getById(Number(id)),
         clientesService.getAll(),
         fetch("http://localhost:3001/api/servicios").then((r) => r.json()),
-      ]);
+      ])) as [any, Cliente[], Servicio[]];
       setClientes(cls);
       setServicios(svcs);
       setForm({
@@ -85,6 +92,11 @@ export default function EditarCitaScreen() {
         descripcion: cita.descripcion ?? "",
         estado: cita.estado ?? "PENDIENTE",
       });
+
+      const clienteCita = cls.find(
+        (cliente) => cliente.id_cliente === cita.id_cliente,
+      );
+      if (clienteCita) cargarAutosCliente(clienteCita);
     } catch (e: any) {
       setMessageDialog({
         title: "Error",
@@ -98,6 +110,40 @@ export default function EditarCitaScreen() {
 
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
+
+  const cargarAutosCliente = async (cliente: Cliente) => {
+    try {
+      setCargandoAutos(true);
+      const autos = await autosService.getByIdentificacion(
+        cliente.identificacion,
+      );
+      setAutosCliente(autos);
+    } catch {
+      setAutosCliente([]);
+    } finally {
+      setCargandoAutos(false);
+    }
+  };
+
+  const seleccionarCliente = (cliente: Cliente) => {
+    setForm((f) => ({
+      ...f,
+      id_cliente: String(cliente.id_cliente),
+      marca_vehiculo: "",
+      modelo_vehiculo: "",
+      anio_vehiculo: "",
+    }));
+    cargarAutosCliente(cliente);
+  };
+
+  const seleccionarAuto = (auto: Auto) => {
+    setForm((f) => ({
+      ...f,
+      marca_vehiculo: auto.marca ?? "",
+      modelo_vehiculo: auto.modelo ?? "",
+      anio_vehiculo: auto.anio ?? "",
+    }));
+  };
 
   // Revisa que los datos obligatorios esten completos y tengan formato correcto.
   const validar = () => {
@@ -249,7 +295,7 @@ export default function EditarCitaScreen() {
                     form.id_cliente === String(c.id_cliente) &&
                       styles.listItemActive,
                   ]}
-                  onPress={() => set("id_cliente")(String(c.id_cliente))}
+                  onPress={() => seleccionarCliente(c)}
                 >
                   <Text
                     style={[
@@ -313,6 +359,61 @@ export default function EditarCitaScreen() {
           {/* Vehículo */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>VEHÍCULO</Text>
+
+            {form.id_cliente ? (
+              <View style={styles.autosBox}>
+                {cargandoAutos ? (
+                  <Text style={styles.helperText}>Cargando autos...</Text>
+                ) : autosCliente.length > 0 ? (
+                  autosCliente.map((auto) => {
+                    const active =
+                      form.marca_vehiculo === (auto.marca ?? "") &&
+                      form.modelo_vehiculo === (auto.modelo ?? "") &&
+                      form.anio_vehiculo === (auto.anio ?? "");
+
+                    return (
+                      <TouchableOpacity
+                        key={
+                          auto.id_auto ??
+                          `${auto.marca}-${auto.modelo}-${auto.placa}`
+                        }
+                        style={[styles.autoBtn, active && styles.autoBtnActive]}
+                        onPress={() => seleccionarAuto(auto)}
+                      >
+                        <Text
+                          style={[
+                            styles.autoBtnText,
+                            active && styles.autoBtnTextActive,
+                          ]}
+                        >
+                          {auto.marca || "Sin marca"} {auto.modelo || ""}
+                          {auto.anio ? ` ${auto.anio}` : ""}
+                        </Text>
+                        {auto.placa ? (
+                          <Text
+                            style={[
+                              styles.autoPlaca,
+                              active && styles.autoBtnTextActive,
+                            ]}
+                          >
+                            {auto.placa}
+                          </Text>
+                        ) : null}
+                      </TouchableOpacity>
+                    );
+                  })
+                ) : (
+                  <Text style={styles.helperText}>
+                    Este cliente no tiene autos registrados
+                  </Text>
+                )}
+              </View>
+            ) : (
+              <Text style={styles.helperText}>
+                Seleccioná un cliente para ver sus autos
+              </Text>
+            )}
+
             <View style={styles.row}>
               <View style={styles.halfField}>
                 <Text style={styles.fieldLabel}>
@@ -351,7 +452,12 @@ export default function EditarCitaScreen() {
                 <Text style={styles.fieldLabel}>
                   FECHA <Text style={styles.req}>*</Text>
                 </Text>
-                <Input placeholder="YYYY-MM-DD" {...inputProps("fecha")} />
+                <DatePickerField
+                  value={form.fecha}
+                  onChange={set("fecha")}
+                  errorMessage={errores.fecha}
+                  minimumDate={today}
+                />
               </View>
               <View style={styles.halfField}>
                 <Text style={styles.fieldLabel}>
@@ -531,6 +637,41 @@ const styles = StyleSheet.create({
   listItemActive: { backgroundColor: Colors.primary },
   listItemText: { fontSize: fs(13), color: Colors.primary },
   listItemTextActive: { color: Colors.cream },
+  autosBox: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: sp(8),
+    marginBottom: sp(12),
+  },
+  helperText: {
+    color: Colors.gray,
+    fontSize: fs(13),
+    marginLeft: sp(10),
+    marginBottom: sp(10),
+  },
+  autoBtn: {
+    paddingHorizontal: sp(14),
+    paddingVertical: sp(10),
+    borderRadius: sp(8),
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.white,
+  },
+  autoBtnActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  autoBtnText: {
+    color: Colors.primary,
+    fontSize: fs(13),
+    fontWeight: "600",
+  },
+  autoBtnTextActive: { color: Colors.cream },
+  autoPlaca: {
+    color: Colors.gray,
+    fontSize: fs(11),
+    marginTop: sp(2),
+  },
   serviciosGrid: { flexDirection: "row", flexWrap: "wrap", gap: sp(8) },
   servicioBtn: {
     paddingHorizontal: sp(14),

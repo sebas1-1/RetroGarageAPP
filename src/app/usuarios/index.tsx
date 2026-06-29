@@ -109,7 +109,10 @@ export default function UsuariosScreen() {
           <Card containerStyle={styles.card}>
             <Text style={styles.nombre}>{item.nombre_completo}</Text>
 
-            <Text style={styles.info}>Rol: {item.rol}</Text>
+            <Text style={styles.info}>
+              Usuario: {item.nombre_usuario || "No registrado"}
+            </Text>
+            <Text style={styles.info}>Rol: {item.rol || "Pendiente"}</Text>
             <Text style={styles.info}>Correo: {item.correo}</Text>
             <Text style={styles.info}>
               Teléfono: {item.telefono || "No registrado"}

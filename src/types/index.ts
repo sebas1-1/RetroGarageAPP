@@ -9,6 +9,7 @@ export interface Rol {
 export interface Usuario {
   id_usuario: number;
   id_rol: number;
+  nombre_usuario: string;
   nombre_completo: string;
   correo: string;
   telefono: string;

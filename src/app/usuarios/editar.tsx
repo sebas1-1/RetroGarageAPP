@@ -15,6 +15,10 @@ import { MessageDialog } from "../../components/shared/MessageDialog";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Rol, usuariosService } from "../../services/usuariosService";
+import {
+  getMissingPasswordRequirements,
+  getPasswordRequirements,
+} from "../../utils/passwordValidation";
 
 // Pantalla para modificar un usuario administrativo existente.
 export default function EditarUsuarioScreen() {
@@ -26,6 +30,7 @@ export default function EditarUsuarioScreen() {
   const [roles, setRoles] = useState<Rol[]>([]);
   const [form, setForm] = useState({
     id_rol: "",
+    nombre_usuario: "",
     nombre_completo: "",
     correo: "",
     telefono: "",
@@ -60,7 +65,8 @@ export default function EditarUsuarioScreen() {
       ]);
       setRoles(rolesData);
       setForm({
-        id_rol: String(data.id_rol),
+        id_rol: data.id_rol ? String(data.id_rol) : "",
+        nombre_usuario: data.nombre_usuario ?? "",
         nombre_completo: data.nombre_completo ?? "",
         correo: data.correo ?? "",
         telefono: data.telefono ?? "",
@@ -87,17 +93,21 @@ export default function EditarUsuarioScreen() {
 
     if (!form.id_rol) e.id_rol = "Seleccione un rol";
 
+    if (!form.nombre_usuario.trim()) e.nombre_usuario = "Campo requerido";
+
     if (!form.nombre_completo.trim()) e.nombre_completo = "Campo requerido";
 
     if (!form.correo.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo))
       e.correo = "Correo inválido";
 
     if (form.contrasena) {
-      if (form.contrasena.length < 6) e.contrasena = "Mínimo 6 caracteres";
-      else if (!/[A-Z]/.test(form.contrasena))
-        e.contrasena = "Debe tener al menos una mayúscula";
-      else if (!/[0-9]/.test(form.contrasena))
-        e.contrasena = "Debe tener al menos un número";
+      const missingPasswordRequirements = getMissingPasswordRequirements(
+        form.contrasena,
+      );
+      if (missingPasswordRequirements.length > 0)
+        e.contrasena = `Falta: ${missingPasswordRequirements
+          .map((requirement) => requirement.label)
+          .join(", ")}`;
 
       if (form.contrasena !== form.confirmar)
         e.confirmar = "Las contraseñas no coinciden";
@@ -114,6 +124,7 @@ export default function EditarUsuarioScreen() {
       setGuardando(true);
       await usuariosService.editar(Number(id), {
         id_rol: Number(form.id_rol),
+        nombre_usuario: form.nombre_usuario.trim(),
         nombre_completo: form.nombre_completo,
         correo: form.correo,
         telefono: form.telefono || null,
@@ -141,6 +152,11 @@ export default function EditarUsuarioScreen() {
       : styles.inputContainer,
     containerStyle: styles.inputWrapper,
   });
+  const passwordRequirements = getPasswordRequirements(form.contrasena);
+  const passwordChangeIsValid =
+    !form.contrasena ||
+    (passwordRequirements.every((requirement) => requirement.isValid) &&
+      form.contrasena === form.confirmar);
 
   if (cargando)
     return (
@@ -214,6 +230,15 @@ export default function EditarUsuarioScreen() {
             <Text style={styles.sectionLabel}>INFORMACIÓN</Text>
 
             <Text style={styles.fieldLabel}>
+              NOMBRE DE USUARIO <Text style={styles.req}>*</Text>
+            </Text>
+            <Input
+              placeholder="Ej. jperez"
+              autoCapitalize="none"
+              {...inputProps("nombre_usuario")}
+            />
+
+            <Text style={styles.fieldLabel}>
               NOMBRE COMPLETO <Text style={styles.req}>*</Text>
             </Text>
             <Input
@@ -250,10 +275,25 @@ export default function EditarUsuarioScreen() {
 
             <Text style={styles.fieldLabel}>NUEVA CONTRASEÑA</Text>
             <Input
-              placeholder="Mínimo 6 caracteres"
+              placeholder="Mínimo 12 caracteres"
               secureTextEntry
               {...inputProps("contrasena")}
             />
+            {form.contrasena ? (
+              <View style={styles.passwordRules}>
+                {passwordRequirements.map((requirement) => (
+                  <Text
+                    key={requirement.key}
+                    style={[
+                      styles.passwordRule,
+                      requirement.isValid && styles.passwordRuleValid,
+                    ]}
+                  >
+                    {requirement.isValid ? "✓" : "•"} {requirement.label}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
 
             <Text style={styles.fieldLabel}>CONFIRMAR CONTRASEÑA</Text>
             <Input
@@ -269,10 +309,10 @@ export default function EditarUsuarioScreen() {
               style={[
                 styles.fabBtn,
                 styles.fabGuardar,
-                guardando && styles.fabDisabled,
+                (guardando || !passwordChangeIsValid) && styles.fabDisabled,
               ]}
               onPress={guardar}
-              disabled={guardando}
+              disabled={guardando || !passwordChangeIsValid}
             >
               {guardando ? (
                 <ActivityIndicator color="white" />
@@ -378,6 +418,21 @@ const styles = StyleSheet.create({
     marginLeft: sp(10),
     marginTop: sp(4),
   },
+  passwordRules: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: sp(6),
+    backgroundColor: Colors.white,
+    paddingHorizontal: sp(12),
+    paddingVertical: sp(10),
+    marginBottom: sp(12),
+  },
+  passwordRule: {
+    color: "#993C1D",
+    fontSize: fs(12),
+    marginBottom: sp(4),
+  },
+  passwordRuleValid: { color: "#0F6E56" },
   inputContainer: {
     borderWidth: 1,
     borderColor: Colors.border,

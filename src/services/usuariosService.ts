@@ -3,8 +3,9 @@ const BASE_URL = "http://localhost:3001/api";
 // Usuario administrativo que puede operar el sistema.
 export interface Usuario {
   id_usuario: number;
-  id_rol: number;
-  rol: string;
+  id_rol: number | null;
+  rol: string | null;
+  nombre_usuario: string | null;
   nombre_completo: string;
   correo: string;
   telefono: string | null;
@@ -20,11 +21,17 @@ export interface Rol {
 }
 
 export type UsuarioInput = {
-  id_rol: number;
+  id_rol: number | null;
+  nombre_usuario: string;
   nombre_completo: string;
   correo: string;
   telefono: string | null;
   contrasena?: string;
+};
+
+export type LoginInput = {
+  usuario: string;
+  contrasena: string;
 };
 
 // Convierte la respuesta a JSON y muestra errores claros si algo falla.
@@ -51,6 +58,14 @@ export const usuariosService = {
   // Crea un usuario nuevo.
   crear: (data: UsuarioInput) =>
     fetch(`${BASE_URL}/usuarios`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).then(handle),
+
+  // Valida credenciales contra el backend.
+  login: (data: LoginInput) =>
+    fetch(`${BASE_URL}/usuarios/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),

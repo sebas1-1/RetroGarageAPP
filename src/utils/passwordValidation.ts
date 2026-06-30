@@ -7,13 +7,11 @@ export type PasswordRequirement = {
 export const getPasswordRequirements = (
   password: string,
 ): PasswordRequirement[] => {
-  const numberMatches = password.match(/\d/g) ?? [];
-
   return [
     {
       key: "length",
-      label: "Mínimo 12 caracteres",
-      isValid: password.length >= 12,
+      label: "Mínimo 8 caracteres",
+      isValid: password.length >= 8,
     },
     {
       key: "uppercase",
@@ -27,8 +25,8 @@ export const getPasswordRequirements = (
     },
     {
       key: "numbers",
-      label: "Al menos 2 números",
-      isValid: numberMatches.length >= 2,
+      label: "Al menos 1 número",
+      isValid: /\d/.test(password),
     },
   ];
 };

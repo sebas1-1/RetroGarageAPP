@@ -1,3 +1,4 @@
+import { apiFetch } from "./apiFetch";
 const BASE_URL = "http://localhost:3001/api";
 
 // Producto o repuesto guardado en inventario.
@@ -48,15 +49,15 @@ async function handle(res: Response) {
 export const inventarioService = {
   // Lista todos los productos.
   getAll: (): Promise<Producto[]> =>
-    fetch(`${BASE_URL}/productos`).then(handle),
+    apiFetch(`${BASE_URL}/productos`).then(handle),
 
   // Obtiene un producto para editarlo.
   getById: (id: number): Promise<Producto> =>
-    fetch(`${BASE_URL}/productos/${id}`).then(handle),
+    apiFetch(`${BASE_URL}/productos/${id}`).then(handle),
 
   // Crea un producto nuevo.
   crear: (data: ProductoInput): Promise<Producto> =>
-    fetch(`${BASE_URL}/productos`, {
+    apiFetch(`${BASE_URL}/productos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -64,7 +65,7 @@ export const inventarioService = {
 
   // Actualiza un producto existente.
   editar: (id: number, data: ProductoInput): Promise<Producto> =>
-    fetch(`${BASE_URL}/productos/${id}`, {
+    apiFetch(`${BASE_URL}/productos/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -72,11 +73,11 @@ export const inventarioService = {
 
   // Marca un producto como agotado desde la lista.
   marcarAgotado: (id: number): Promise<Producto> =>
-    fetch(`${BASE_URL}/productos/${id}/agotado`, {
+    apiFetch(`${BASE_URL}/productos/${id}/agotado`, {
       method: "PATCH",
     }).then(handle),
 
   // Elimina un producto del inventario.
   eliminar: (id: number): Promise<void> =>
-    fetch(`${BASE_URL}/productos/${id}`, { method: "DELETE" }).then(handle),
+    apiFetch(`${BASE_URL}/productos/${id}`, { method: "DELETE" }).then(handle),
 };

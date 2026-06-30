@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,17 +15,24 @@ import {
 import { MessageDialog } from "../components/shared/MessageDialog";
 import { Colors } from "../constants/colors";
 import { fs, sp } from "../constants/responsive";
+import { setCurrentUserId } from "../services/authSession";
 import { usuariosService } from "../services/usuariosService";
 import {
   getMissingPasswordRequirements,
   getPasswordRequirements,
 } from "../utils/passwordValidation";
+import {
+  getMissingUsernameRequirements,
+  getUsernameRequirements,
+} from "../utils/usernameValidation";
 
 // Pantalla inicial: login real y solicitud de cuenta sin rol asignado.
 export default function LoginScreen() {
   const router = useRouter();
 
-  const [modo, setModo] = useState<"login" | "registro">("login");
+  const [modo, setModo] = useState<"login" | "registro" | "recuperacion">(
+    "login",
+  );
   const [cargando, setCargando] = useState(false);
   const [usuario, setUsuario] = useState("");
   const [contrasena, setContrasena] = useState("");
@@ -33,6 +41,14 @@ export default function LoginScreen() {
   const [correo, setCorreo] = useState("");
   const [telefono, setTelefono] = useState("");
   const [confirmar, setConfirmar] = useState("");
+  const [respuesta1, setRespuesta1] = useState("");
+  const [respuesta2, setRespuesta2] = useState("");
+  const [preguntaRecuperacion, setPreguntaRecuperacion] = useState<1 | 2>(1);
+  const [respuestaRecuperacion, setRespuestaRecuperacion] = useState("");
+  const [codigoRecuperacion, setCodigoRecuperacion] = useState("");
+  const [recuperacionSolicitada, setRecuperacionSolicitada] = useState(false);
+  const [nuevaContrasena, setNuevaContrasena] = useState("");
+  const [confirmarNuevaContrasena, setConfirmarNuevaContrasena] = useState("");
   const [focused, setFocused] = useState("");
   const [messageDialog, setMessageDialog] = useState<{
     title: string;
@@ -47,10 +63,18 @@ export default function LoginScreen() {
     setCorreo("");
     setTelefono("");
     setConfirmar("");
+    setRespuesta1("");
+    setRespuesta2("");
+    setPreguntaRecuperacion(1);
+    setRespuestaRecuperacion("");
+    setCodigoRecuperacion("");
+    setRecuperacionSolicitada(false);
+    setNuevaContrasena("");
+    setConfirmarNuevaContrasena("");
     setFocused("");
   };
 
-  const cambiarModo = (nuevoModo: "login" | "registro") => {
+  const cambiarModo = (nuevoModo: "login" | "registro" | "recuperacion") => {
     setModo(nuevoModo);
     limpiar();
   };
@@ -66,10 +90,11 @@ export default function LoginScreen() {
 
     try {
       setCargando(true);
-      await usuariosService.login({
+      const response = await usuariosService.login({
         usuario: usuario.trim(),
         contrasena,
       });
+      setCurrentUserId(response.usuario?.id_usuario);
       router.replace("/dashboard" as any);
     } catch (e: any) {
       setMessageDialog({
@@ -81,16 +106,32 @@ export default function LoginScreen() {
     }
   };
 
+
   const handleRegistro = async () => {
     if (
       !nombreUsuario.trim() ||
       !nombreCompleto.trim() ||
       !correo.trim() ||
-      !contrasena
+      !contrasena ||
+      !respuesta1.trim() ||
+      !respuesta2.trim()
     ) {
       setMessageDialog({
         title: "Datos incompletos",
         message: "Complete los campos obligatorios.",
+      });
+      return;
+    }
+
+    const missingUsernameRequirements = getMissingUsernameRequirements(
+      nombreUsuario.trim(),
+    );
+    if (missingUsernameRequirements.length > 0) {
+      setMessageDialog({
+        title: "Nombre de usuario inválido",
+        message: `Falta: ${missingUsernameRequirements
+          .map((requirement) => requirement.label)
+          .join(", ")}.`,
       });
       return;
     }
@@ -132,6 +173,8 @@ export default function LoginScreen() {
         correo: correo.trim(),
         telefono: telefono.trim() || null,
         contrasena,
+        respuesta1: respuesta1.trim(),
+        respuesta2: respuesta2.trim(),
       });
       limpiar();
       setModo("login");
@@ -149,20 +192,124 @@ export default function LoginScreen() {
     }
   };
 
+  const handleSolicitarRecuperacion = async () => {
+    if (!correo.trim() || !respuestaRecuperacion.trim()) {
+      setMessageDialog({
+        title: "Datos incompletos",
+        message: "Ingrese el correo y la respuesta de seguridad.",
+      });
+      return;
+    }
+
+    try {
+      setCargando(true);
+      const response = await usuariosService.solicitarRecuperacion({
+        correo: correo.trim(),
+        pregunta: preguntaRecuperacion,
+        respuesta: respuestaRecuperacion.trim(),
+      });
+      setRecuperacionSolicitada(true);
+      setMessageDialog({
+        title: "Solicitud recibida",
+        message: response.message,
+      });
+    } catch (e: any) {
+      setMessageDialog({
+        title: "No se pudo solicitar recuperación",
+        message: e.message || "Intente nuevamente.",
+      });
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const handleConfirmarRecuperacion = async () => {
+    if (!correo.trim() || !codigoRecuperacion.trim() || !nuevaContrasena) {
+      setMessageDialog({
+        title: "Datos incompletos",
+        message: "Ingrese correo, código y nueva contraseña.",
+      });
+      return;
+    }
+
+    const missingPasswordRequirements =
+      getMissingPasswordRequirements(nuevaContrasena);
+    if (missingPasswordRequirements.length > 0) {
+      setMessageDialog({
+        title: "Contraseña inválida",
+        message: `Falta: ${missingPasswordRequirements
+          .map((requirement) => requirement.label)
+          .join(", ")}.`,
+      });
+      return;
+    }
+
+    if (nuevaContrasena !== confirmarNuevaContrasena) {
+      setMessageDialog({
+        title: "Contraseñas distintas",
+        message: "La confirmación debe coincidir con la nueva contraseña.",
+      });
+      return;
+    }
+
+    try {
+      setCargando(true);
+      await usuariosService.confirmarRecuperacion({
+        correo: correo.trim(),
+        codigo: codigoRecuperacion.trim(),
+        nueva_contrasena: nuevaContrasena,
+      });
+      limpiar();
+      setModo("login");
+      setMessageDialog({
+        title: "Contraseña actualizada",
+        message: "Ya puede ingresar con su nueva contraseña.",
+      });
+    } catch (e: any) {
+      setMessageDialog({
+        title: "No se pudo actualizar",
+        message: e.message || "Revise el código e intente nuevamente.",
+      });
+    } finally {
+      setCargando(false);
+    }
+  };
+
   const inputStyle = (key: string) => [
     styles.input,
     focused === key && styles.inputFocused,
   ];
+  const usernameRequirements = getUsernameRequirements(nombreUsuario.trim());
   const passwordRequirements = getPasswordRequirements(contrasena);
+  const recoveryPasswordRequirements = getPasswordRequirements(nuevaContrasena);
   const canCreateAccount = Boolean(
     modo === "registro" &&
       nombreUsuario.trim() &&
+      usernameRequirements.every((requirement) => requirement.isValid) &&
       nombreCompleto.trim() &&
       correo.trim() &&
       contrasena &&
       confirmar &&
+      respuesta1.trim() &&
+      respuesta2.trim() &&
       passwordRequirements.every((requirement) => requirement.isValid) &&
       contrasena === confirmar,
+  );
+  const canRequestRecovery = Boolean(
+    modo === "recuperacion" &&
+      !recuperacionSolicitada &&
+      correo.trim() &&
+      respuestaRecuperacion.trim(),
+  );
+  const canResetPassword = Boolean(
+    modo === "recuperacion" &&
+      recuperacionSolicitada &&
+      correo.trim() &&
+      codigoRecuperacion.trim() &&
+      nuevaContrasena &&
+      confirmarNuevaContrasena &&
+      recoveryPasswordRequirements.every((requirement) => requirement.isValid) &&
+      nuevaContrasena === confirmarNuevaContrasena,
   );
 
   return (
@@ -184,47 +331,213 @@ export default function LoginScreen() {
 
         <View style={styles.body}>
           <Text style={styles.titulo}>
-            {modo === "login" ? "Acceso administrativo" : "Crear usuario"}
+            {modo === "login"
+              ? "Acceso administrativo"
+              : modo === "registro"
+                ? "Crear usuario"
+                : "Recuperar contraseña"}
           </Text>
           <Text style={styles.subtitulo}>
             {modo === "login"
               ? "Ingresa tus credenciales para continuar"
-              : "Solicita una cuenta para que el admin asigne tu rol"}
+              : modo === "registro"
+                ? "Solicita una cuenta para que el admin asigne tu rol"
+                : "Verifica tu identidad y crea una nueva contraseña"}
           </Text>
 
-          <View style={styles.modeRow}>
-            <TouchableOpacity
-              style={[styles.modeBtn, modo === "login" && styles.modeBtnActive]}
-              onPress={() => cambiarModo("login")}
-              activeOpacity={0.85}
-            >
-              <Text
+          {modo !== "recuperacion" ? (
+            <View style={styles.modeRow}>
+              <TouchableOpacity
                 style={[
-                  styles.modeText,
-                  modo === "login" && styles.modeTextActive,
+                  styles.modeBtn,
+                  modo === "login" && styles.modeBtnActive,
                 ]}
+                onPress={() => cambiarModo("login")}
+                activeOpacity={0.85}
               >
-                ENTRAR
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.modeBtn,
-                modo === "registro" && styles.modeBtnActive,
-              ]}
-              onPress={() => cambiarModo("registro")}
-              activeOpacity={0.85}
-            >
-              <Text
+                <Text
+                  style={[
+                    styles.modeText,
+                    modo === "login" && styles.modeTextActive,
+                  ]}
+                >
+                  ENTRAR
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
                 style={[
-                  styles.modeText,
-                  modo === "registro" && styles.modeTextActive,
+                  styles.modeBtn,
+                  modo === "registro" && styles.modeBtnActive,
                 ]}
+                onPress={() => cambiarModo("registro")}
+                activeOpacity={0.85}
               >
-                CREAR
-              </Text>
-            </TouchableOpacity>
-          </View>
+                <Text
+                  style={[
+                    styles.modeText,
+                    modo === "registro" && styles.modeTextActive,
+                  ]}
+                >
+                  CREAR
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          {modo === "recuperacion" && (
+            <>
+              <Text style={styles.sectionLabel}>CORREO ELECTRÓNICO</Text>
+              <TextInput
+                style={inputStyle("correoRecuperacion")}
+                placeholder="usuario@retrogarage.com"
+                placeholderTextColor={Colors.gray}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={correo}
+                onChangeText={setCorreo}
+                onFocus={() => setFocused("correoRecuperacion")}
+                onBlur={() => setFocused("")}
+                editable={!recuperacionSolicitada}
+              />
+
+              {!recuperacionSolicitada ? (
+                <>
+                  <Text style={[styles.sectionLabel, styles.fieldSpacing]}>
+                    PREGUNTA DE SEGURIDAD
+                  </Text>
+                  <View style={styles.modeRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.modeBtn,
+                        preguntaRecuperacion === 1 && styles.modeBtnActive,
+                      ]}
+                      onPress={() => setPreguntaRecuperacion(1)}
+                      activeOpacity={0.85}
+                    >
+                      <Text
+                        style={[
+                          styles.modeText,
+                          preguntaRecuperacion === 1 && styles.modeTextActive,
+                        ]}
+                      >
+                        MASCOTA
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.modeBtn,
+                        preguntaRecuperacion === 2 && styles.modeBtnActive,
+                      ]}
+                      onPress={() => setPreguntaRecuperacion(2)}
+                      activeOpacity={0.85}
+                    >
+                      <Text
+                        style={[
+                          styles.modeText,
+                          preguntaRecuperacion === 2 && styles.modeTextActive,
+                        ]}
+                      >
+                        CIUDAD
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <Text style={styles.securityQuestion}>
+                    {preguntaRecuperacion === 1
+                      ? "¿Cuál es el nombre de tu primera mascota?"
+                      : "¿En qué ciudad o pueblo naciste?"}
+                  </Text>
+                  <TextInput
+                    style={inputStyle("respuestaRecuperacion")}
+                    placeholder={
+                      preguntaRecuperacion === 1 ? "Ej. Rocky" : "Ej. Cartago"
+                    }
+                    placeholderTextColor={Colors.gray}
+                    value={respuestaRecuperacion}
+                    onChangeText={setRespuestaRecuperacion}
+                    onFocus={() => setFocused("respuestaRecuperacion")}
+                    onBlur={() => setFocused("")}
+                  />
+                </>
+              ) : (
+                <>
+                  <Text style={[styles.sectionLabel, styles.fieldSpacing]}>
+                    CÓDIGO DE RECUPERACIÓN
+                  </Text>
+                  <TextInput
+                    style={inputStyle("codigoRecuperacion")}
+                    placeholder="Código temporal"
+                    placeholderTextColor={Colors.gray}
+                    keyboardType="number-pad"
+                    value={codigoRecuperacion}
+                    onChangeText={setCodigoRecuperacion}
+                    onFocus={() => setFocused("codigoRecuperacion")}
+                    onBlur={() => setFocused("")}
+                  />
+
+                  <Text style={[styles.sectionLabel, styles.fieldSpacing]}>
+                    NUEVA CONTRASEÑA
+                  </Text>
+                  <TextInput
+                    style={inputStyle("nuevaContrasena")}
+                    placeholder="••••••••"
+                    placeholderTextColor={Colors.gray}
+                    secureTextEntry
+                    value={nuevaContrasena}
+                    onChangeText={setNuevaContrasena}
+                    onFocus={() => setFocused("nuevaContrasena")}
+                    onBlur={() => setFocused("")}
+                  />
+
+                  <View style={styles.passwordRules}>
+                    <Text style={styles.passwordRulesTitle}>
+                      Tu contraseña debe cumplir:
+                    </Text>
+                    {recoveryPasswordRequirements.map((requirement) => (
+                      <Text
+                        key={requirement.key}
+                        style={[
+                          styles.passwordRule,
+                          requirement.isValid && styles.passwordRuleValid,
+                        ]}
+                      >
+                        {requirement.isValid ? "✓" : "•"} {requirement.label}
+                      </Text>
+                    ))}
+                  </View>
+
+                  <Text style={[styles.sectionLabel, styles.fieldSpacing]}>
+                    CONFIRMAR NUEVA CONTRASEÑA
+                  </Text>
+                  <TextInput
+                    style={inputStyle("confirmarNuevaContrasena")}
+                    placeholder="••••••••"
+                    placeholderTextColor={Colors.gray}
+                    secureTextEntry
+                    value={confirmarNuevaContrasena}
+                    onChangeText={setConfirmarNuevaContrasena}
+                    onFocus={() => setFocused("confirmarNuevaContrasena")}
+                    onBlur={() => setFocused("")}
+                  />
+                  <Text
+                    style={[
+                      styles.passwordMatch,
+                      confirmarNuevaContrasena &&
+                        nuevaContrasena === confirmarNuevaContrasena &&
+                        styles.passwordRuleValid,
+                    ]}
+                  >
+                    {confirmarNuevaContrasena &&
+                    nuevaContrasena === confirmarNuevaContrasena
+                      ? "✓"
+                      : "•"}{" "}
+                    Las contraseñas coinciden
+                  </Text>
+                </>
+              )}
+            </>
+          )}
 
           {modo === "registro" && (
             <>
@@ -240,6 +553,22 @@ export default function LoginScreen() {
                 onFocus={() => setFocused("nombreUsuario")}
                 onBlur={() => setFocused("")}
               />
+              <View style={styles.passwordRules}>
+                <Text style={styles.passwordRulesTitle}>
+                  Tu nombre de usuario debe cumplir:
+                </Text>
+                {usernameRequirements.map((requirement) => (
+                  <Text
+                    key={requirement.key}
+                    style={[
+                      styles.passwordRule,
+                      requirement.isValid && styles.passwordRuleValid,
+                    ]}
+                  >
+                    {requirement.isValid ? "✓" : "•"} {requirement.label}
+                  </Text>
+                ))}
+              </View>
 
               <Text style={[styles.sectionLabel, styles.fieldSpacing]}>
                 NOMBRE COMPLETO
@@ -256,119 +585,206 @@ export default function LoginScreen() {
             </>
           )}
 
-          <Text
-            style={[
-              styles.sectionLabel,
-              modo === "registro" && styles.fieldSpacing,
-            ]}
-          >
-            {modo === "login" ? "USUARIO O CORREO" : "CORREO ELECTRÓNICO"}
-          </Text>
-          <TextInput
-            style={inputStyle(modo === "login" ? "usuario" : "correo")}
-            placeholder={modo === "login" ? "jperez" : "usuario@retrogarage.com"}
-            placeholderTextColor={Colors.gray}
-            keyboardType={modo === "login" ? "default" : "email-address"}
-            autoCapitalize="none"
-            autoCorrect={false}
-            value={modo === "login" ? usuario : correo}
-            onChangeText={modo === "login" ? setUsuario : setCorreo}
-            onFocus={() => setFocused(modo === "login" ? "usuario" : "correo")}
-            onBlur={() => setFocused("")}
-          />
-
-          {modo === "registro" && (
+          {modo !== "recuperacion" && (
             <>
-              <Text style={[styles.sectionLabel, styles.fieldSpacing]}>
-                TELÉFONO
+              <Text
+                style={[
+                  styles.sectionLabel,
+                  modo === "registro" && styles.fieldSpacing,
+                ]}
+              >
+                {modo === "login" ? "USUARIO O CORREO" : "CORREO ELECTRÓNICO"}
               </Text>
               <TextInput
-                style={inputStyle("telefono")}
-                placeholder="8888-8888"
+                style={inputStyle(modo === "login" ? "usuario" : "correo")}
+                placeholder={
+                  modo === "login" ? "jperez" : "usuario@retrogarage.com"
+                }
                 placeholderTextColor={Colors.gray}
-                keyboardType="phone-pad"
-                value={telefono}
-                onChangeText={setTelefono}
-                onFocus={() => setFocused("telefono")}
+                keyboardType={modo === "login" ? "default" : "email-address"}
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={modo === "login" ? usuario : correo}
+                onChangeText={modo === "login" ? setUsuario : setCorreo}
+                onFocus={() =>
+                  setFocused(modo === "login" ? "usuario" : "correo")
+                }
                 onBlur={() => setFocused("")}
               />
-            </>
-          )}
 
-          <Text style={[styles.sectionLabel, styles.fieldSpacing]}>
-            CONTRASEÑA
-          </Text>
-          <TextInput
-            style={inputStyle("contrasena")}
-            placeholder="••••••••"
-            placeholderTextColor={Colors.gray}
-            secureTextEntry
-            value={contrasena}
-            onChangeText={setContrasena}
-            onFocus={() => setFocused("contrasena")}
-            onBlur={() => setFocused("")}
-          />
+              {modo === "registro" && (
+                <>
+                  <Text style={[styles.sectionLabel, styles.fieldSpacing]}>
+                    TELÉFONO
+                  </Text>
+                  <TextInput
+                    style={inputStyle("telefono")}
+                    placeholder="8888-8888"
+                    placeholderTextColor={Colors.gray}
+                    keyboardType="phone-pad"
+                    value={telefono}
+                    onChangeText={setTelefono}
+                    onFocus={() => setFocused("telefono")}
+                    onBlur={() => setFocused("")}
+                  />
+                </>
+              )}
 
-          {modo === "registro" && (
-            <View style={styles.passwordRules}>
-              {passwordRequirements.map((requirement) => (
-                <Text
-                  key={requirement.key}
-                  style={[
-                    styles.passwordRule,
-                    requirement.isValid && styles.passwordRuleValid,
-                  ]}
-                >
-                  {requirement.isValid ? "✓" : "•"} {requirement.label}
-                </Text>
-              ))}
-            </View>
-          )}
+              {modo === "registro" && (
+                <>
+                  <Text style={[styles.sectionLabel, styles.fieldSpacing]}>
+                    ¿CUÁL ES EL NOMBRE DE TU PRIMERA MASCOTA?
+                  </Text>
+                  <TextInput
+                    style={inputStyle("respuesta1")}
+                    placeholder="Ej. Rocky"
+                    placeholderTextColor={Colors.gray}
+                    value={respuesta1}
+                    onChangeText={setRespuesta1}
+                    onFocus={() => setFocused("respuesta1")}
+                    onBlur={() => setFocused("")}
+                  />
 
-          {modo === "registro" && (
-            <>
+                  <Text style={[styles.sectionLabel, styles.fieldSpacing]}>
+                    ¿EN QUÉ CIUDAD O PUEBLO NACISTE?
+                  </Text>
+                  <TextInput
+                    style={inputStyle("respuesta2")}
+                    placeholder="Ej. Cartago"
+                    placeholderTextColor={Colors.gray}
+                    value={respuesta2}
+                    onChangeText={setRespuesta2}
+                    onFocus={() => setFocused("respuesta2")}
+                    onBlur={() => setFocused("")}
+                  />
+                </>
+              )}
+
               <Text style={[styles.sectionLabel, styles.fieldSpacing]}>
-                CONFIRMAR CONTRASEÑA
+                CONTRASEÑA
               </Text>
               <TextInput
-                style={inputStyle("confirmar")}
+                style={inputStyle("contrasena")}
                 placeholder="••••••••"
                 placeholderTextColor={Colors.gray}
                 secureTextEntry
-                value={confirmar}
-                onChangeText={setConfirmar}
-                onFocus={() => setFocused("confirmar")}
+                value={contrasena}
+                onChangeText={setContrasena}
+                onFocus={() => setFocused("contrasena")}
                 onBlur={() => setFocused("")}
               />
+
+              {modo === "registro" && (
+                <View style={styles.passwordRules}>
+                  <Text style={styles.passwordRulesTitle}>
+                    Tu contraseña debe cumplir:
+                  </Text>
+                  {passwordRequirements.map((requirement) => (
+                    <Text
+                      key={requirement.key}
+                      style={[
+                        styles.passwordRule,
+                        requirement.isValid && styles.passwordRuleValid,
+                      ]}
+                    >
+                      {requirement.isValid ? "✓" : "•"} {requirement.label}
+                    </Text>
+                  ))}
+                </View>
+              )}
+
+              {modo === "registro" && (
+                <>
+                  <Text style={[styles.sectionLabel, styles.fieldSpacing]}>
+                    CONFIRMAR CONTRASEÑA
+                  </Text>
+                  <TextInput
+                    style={inputStyle("confirmar")}
+                    placeholder="••••••••"
+                    placeholderTextColor={Colors.gray}
+                    secureTextEntry
+                    value={confirmar}
+                    onChangeText={setConfirmar}
+                    onFocus={() => setFocused("confirmar")}
+                    onBlur={() => setFocused("")}
+                  />
+                  <Text
+                    style={[
+                      styles.passwordMatch,
+                      confirmar &&
+                        contrasena === confirmar &&
+                        styles.passwordRuleValid,
+                    ]}
+                  >
+                    {confirmar && contrasena === confirmar ? "✓" : "•"} Las
+                    contraseñas coinciden
+                  </Text>
+                </>
+              )}
             </>
           )}
+
 
           <TouchableOpacity
             style={[
               styles.boton,
-              (cargando || (modo === "registro" && !canCreateAccount)) &&
+              (cargando ||
+                (modo === "registro" && !canCreateAccount) ||
+                (modo === "recuperacion" &&
+                  !(canRequestRecovery || canResetPassword))) &&
                 styles.botonDisabled,
             ]}
-            onPress={modo === "login" ? handleLogin : handleRegistro}
+            onPress={
+              modo === "login"
+                ? handleLogin
+                : modo === "registro"
+                  ? handleRegistro
+                  : recuperacionSolicitada
+                    ? handleConfirmarRecuperacion
+                    : handleSolicitarRecuperacion
+            }
             activeOpacity={0.85}
-            disabled={cargando || (modo === "registro" && !canCreateAccount)}
+            disabled={
+              cargando ||
+              (modo === "registro" && !canCreateAccount) ||
+              (modo === "recuperacion" &&
+                !(canRequestRecovery || canResetPassword))
+            }
           >
             {cargando ? (
               <ActivityIndicator color={Colors.cream} />
             ) : (
               <Text style={styles.botonTexto}>
-                {modo === "login" ? "ENTRAR AL TALLER" : "CREAR CUENTA"}
+                {modo === "login"
+                  ? needsOtp
+                    ? "VALIDAR CÓDIGO"
+                    : "ENTRAR AL TALLER"
+                  : modo === "registro"
+                    ? "CREAR CUENTA"
+                    : recuperacionSolicitada
+                      ? "ACTUALIZAR CONTRASEÑA"
+                      : "SOLICITAR CÓDIGO"}
               </Text>
             )}
           </TouchableOpacity>
 
           {modo === "login" && (
             <TouchableOpacity
-              onPress={() => {}}
+              onPress={() => cambiarModo("recuperacion")}
               activeOpacity={0.7}
               style={styles.olvidasteBtn}
             >
-              <Text style={styles.olvidaste}>¿Olvidaste tu contraseña?</Text>
+              <Text style={styles.olvidaste}>Olvidé mi contraseña</Text>
+            </TouchableOpacity>
+          )}
+
+          {modo === "recuperacion" && (
+            <TouchableOpacity
+              onPress={() => cambiarModo("login")}
+              activeOpacity={0.7}
+              style={styles.olvidasteBtn}
+            >
+              <Text style={styles.olvidaste}>Volver al inicio de sesión</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -495,6 +911,12 @@ const styles = StyleSheet.create({
     paddingVertical: sp(10),
     marginTop: sp(10),
   },
+  passwordRulesTitle: {
+    color: Colors.primary,
+    fontSize: fs(12),
+    fontWeight: "700",
+    marginBottom: sp(8),
+  },
   passwordRule: {
     color: "#993C1D",
     fontSize: fs(12),
@@ -502,6 +924,63 @@ const styles = StyleSheet.create({
   },
   passwordRuleValid: {
     color: "#0F6E56",
+  },
+  passwordMatch: {
+    color: "#993C1D",
+    fontSize: fs(12),
+    marginTop: sp(6),
+    marginLeft: sp(4),
+  },
+  otpBox: {
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: sp(10),
+    padding: sp(14),
+    marginTop: sp(20),
+  },
+  otpMethodRow: {
+    flexDirection: "row",
+    gap: sp(8),
+    marginBottom: sp(12),
+  },
+  otpMethodBtn: {
+    flex: 1,
+    borderRadius: sp(8),
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: sp(8),
+    alignItems: "center",
+  },
+  otpMethodBtnActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  otpMethodText: {
+    fontSize: fs(11),
+    fontWeight: "700",
+    color: Colors.gray,
+    letterSpacing: 0.5,
+  },
+  otpMethodTextActive: {
+    color: Colors.cream,
+  },
+  otpText: {
+    color: Colors.primary,
+    fontSize: fs(12),
+    marginBottom: sp(10),
+  },
+  otpQr: {
+    width: sp(190),
+    height: sp(190),
+    alignSelf: "center",
+    marginBottom: sp(12),
+  },
+  securityQuestion: {
+    color: Colors.primary,
+    fontSize: fs(13),
+    fontWeight: "600",
+    marginBottom: sp(8),
   },
   boton: {
     backgroundColor: Colors.primary,

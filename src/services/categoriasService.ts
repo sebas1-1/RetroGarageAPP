@@ -1,3 +1,4 @@
+import { apiFetch } from "./apiFetch";
 const BASE_URL = "http://localhost:3001/api";
 
 // Categoria usada para clasificar productos o servicios.
@@ -25,11 +26,11 @@ async function handle(res: Response) {
 // Servicio con las operaciones principales de categorias.
 export const categoriasService = {
   // Carga todas las categorias disponibles.
-  getAll: () => fetch(`${BASE_URL}/categorias`).then(handle),
+  getAll: () => apiFetch(`${BASE_URL}/categorias`).then(handle),
 
   // Crea una categoria nueva.
   crear: (data: CategoriaInput) =>
-    fetch(`${BASE_URL}/categorias`, {
+    apiFetch(`${BASE_URL}/categorias`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -37,7 +38,7 @@ export const categoriasService = {
 
   // Edita una categoria existente.
   editar: (id: number, data: CategoriaInput) =>
-    fetch(`${BASE_URL}/categorias/${id}`, {
+    apiFetch(`${BASE_URL}/categorias/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -45,5 +46,5 @@ export const categoriasService = {
 
   // Elimina una categoria por id.
   eliminar: (id: number) =>
-    fetch(`${BASE_URL}/categorias/${id}`, { method: "DELETE" }).then(handle),
+    apiFetch(`${BASE_URL}/categorias/${id}`, { method: "DELETE" }).then(handle),
 };

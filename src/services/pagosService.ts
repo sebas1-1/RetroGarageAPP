@@ -1,3 +1,4 @@
+import { apiFetch } from "./apiFetch";
 const BASE_URL = "http://localhost:3001/api";
 
 // Metodo de pago disponible para registrar cobros.
@@ -51,17 +52,17 @@ async function handle(res: Response) {
 export const pagosService = {
   // Lista los metodos de pago configurados.
   getMetodos: (): Promise<MetodoPago[]> =>
-    fetch(`${BASE_URL}/pagos/metodos/lista`).then(handle),
+    apiFetch(`${BASE_URL}/pagos/metodos/lista`).then(handle),
 
   // Trae todos los pagos registrados para reportes y listados.
-  getAll: () => fetch(`${BASE_URL}/pagos`).then(handle),
+  getAll: () => apiFetch(`${BASE_URL}/pagos`).then(handle),
 
   // Trae un pago especifico por id.
-  getById: (id: number) => fetch(`${BASE_URL}/pagos/${id}`).then(handle),
+  getById: (id: number) => apiFetch(`${BASE_URL}/pagos/${id}`).then(handle),
 
   // Guarda un pago con su metodo, monto y productos asociados.
   registrar: (data: PagoInput): Promise<PagoResult> =>
-    fetch(`${BASE_URL}/pagos`, {
+    apiFetch(`${BASE_URL}/pagos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),

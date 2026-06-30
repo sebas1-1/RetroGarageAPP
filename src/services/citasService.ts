@@ -1,3 +1,4 @@
+import { apiFetch } from "./apiFetch";
 const BASE_URL = "http://localhost:3001/api";
 
 // Modelo de una cita tal como llega desde la API.
@@ -42,16 +43,16 @@ async function handle(res: Response) {
 export const citasService = {
   // Lista citas y permite filtrar por texto o estado.
   getAll: (buscar = "", estado = "") =>
-    fetch(
+    apiFetch(
       `${BASE_URL}/citas?buscar=${encodeURIComponent(buscar)}&estado=${estado}`,
     ).then(handle),
 
   // Obtiene una cita especifica para editarla o ver su detalle.
-  getById: (id: number) => fetch(`${BASE_URL}/citas/${id}`).then(handle),
+  getById: (id: number) => apiFetch(`${BASE_URL}/citas/${id}`).then(handle),
 
   // Crea una nueva cita en la base de datos.
   crear: (data: CitaInput) =>
-    fetch(`${BASE_URL}/citas`, {
+    apiFetch(`${BASE_URL}/citas`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -59,7 +60,7 @@ export const citasService = {
 
   // Actualiza todos los datos editables de una cita.
   editar: (id: number, data: CitaInput) =>
-    fetch(`${BASE_URL}/citas/${id}`, {
+    apiFetch(`${BASE_URL}/citas/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -67,7 +68,7 @@ export const citasService = {
 
   // Cambia solo el estado sin tocar el resto de la cita.
   cambiarEstado: (id: number, estado: string) =>
-    fetch(`${BASE_URL}/citas/${id}/estado`, {
+    apiFetch(`${BASE_URL}/citas/${id}/estado`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ estado }),
@@ -75,5 +76,5 @@ export const citasService = {
 
   // Elimina una cita por su identificador.
   eliminar: (id: number) =>
-    fetch(`${BASE_URL}/citas/${id}`, { method: "DELETE" }).then(handle),
+    apiFetch(`${BASE_URL}/citas/${id}`, { method: "DELETE" }).then(handle),
 };

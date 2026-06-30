@@ -1,4 +1,7 @@
-const BASE_URL = "http://localhost:3001/api";
+import { apiFetch } from "./apiFetch";
+
+const BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL || "http://192.168.100.23:3001/api";
 
 // Usuario administrativo que puede operar el sistema.
 export interface Usuario {
@@ -27,11 +30,25 @@ export type UsuarioInput = {
   correo: string;
   telefono: string | null;
   contrasena?: string;
+  respuesta1?: string;
+  respuesta2?: string;
 };
 
 export type LoginInput = {
   usuario: string;
   contrasena: string;
+};
+
+export type SolicitarRecuperacionInput = {
+  correo: string;
+  pregunta: 1 | 2;
+  respuesta: string;
+};
+
+export type ConfirmarRecuperacionInput = {
+  correo: string;
+  codigo: string;
+  nueva_contrasena: string;
 };
 
 // Convierte la respuesta a JSON y muestra errores claros si algo falla.
@@ -45,19 +62,19 @@ async function handle(res: Response) {
 export const usuariosService = {
   // Lista usuarios y permite buscar por texto.
   getAll: (buscar = "") =>
-    fetch(
+    apiFetch(
       `${BASE_URL}/usuarios${buscar ? `?buscar=${encodeURIComponent(buscar)}` : ""}`,
     ).then(handle),
 
   // Obtiene un usuario para editarlo.
-  getById: (id: number) => fetch(`${BASE_URL}/usuarios/${id}`).then(handle),
+  getById: (id: number) => apiFetch(`${BASE_URL}/usuarios/${id}`).then(handle),
 
   // Carga los roles disponibles para el formulario.
-  getRoles: () => fetch(`${BASE_URL}/usuarios/roles`).then(handle),
+  getRoles: () => apiFetch(`${BASE_URL}/usuarios/roles`).then(handle),
 
   // Crea un usuario nuevo.
   crear: (data: UsuarioInput) =>
-    fetch(`${BASE_URL}/usuarios`, {
+    apiFetch(`${BASE_URL}/usuarios`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -65,7 +82,21 @@ export const usuariosService = {
 
   // Valida credenciales contra el backend.
   login: (data: LoginInput) =>
-    fetch(`${BASE_URL}/usuarios/login`, {
+    apiFetch(`${BASE_URL}/usuarios/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).then(handle),
+
+  solicitarRecuperacion: (data: SolicitarRecuperacionInput) =>
+    apiFetch(`${BASE_URL}/usuarios/recuperacion/solicitar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).then(handle),
+
+  confirmarRecuperacion: (data: ConfirmarRecuperacionInput) =>
+    apiFetch(`${BASE_URL}/usuarios/recuperacion/confirmar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -73,7 +104,7 @@ export const usuariosService = {
 
   // Actualiza datos de un usuario existente.
   editar: (id: number, data: UsuarioInput) =>
-    fetch(`${BASE_URL}/usuarios/${id}`, {
+    apiFetch(`${BASE_URL}/usuarios/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -81,5 +112,5 @@ export const usuariosService = {
 
   // Elimina un usuario por id.
   eliminar: (id: number) =>
-    fetch(`${BASE_URL}/usuarios/${id}`, { method: "DELETE" }).then(handle),
+    apiFetch(`${BASE_URL}/usuarios/${id}`, { method: "DELETE" }).then(handle),
 };

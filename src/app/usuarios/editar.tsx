@@ -19,6 +19,10 @@ import {
   getMissingPasswordRequirements,
   getPasswordRequirements,
 } from "../../utils/passwordValidation";
+import {
+  getMissingUsernameRequirements,
+  getUsernameRequirements,
+} from "../../utils/usernameValidation";
 
 // Pantalla para modificar un usuario administrativo existente.
 export default function EditarUsuarioScreen() {
@@ -93,7 +97,13 @@ export default function EditarUsuarioScreen() {
 
     if (!form.id_rol) e.id_rol = "Seleccione un rol";
 
-    if (!form.nombre_usuario.trim()) e.nombre_usuario = "Campo requerido";
+    const missingUsernameRequirements = getMissingUsernameRequirements(
+      form.nombre_usuario.trim(),
+    );
+    if (missingUsernameRequirements.length > 0)
+      e.nombre_usuario = `Falta: ${missingUsernameRequirements
+        .map((requirement) => requirement.label)
+        .join(", ")}`;
 
     if (!form.nombre_completo.trim()) e.nombre_completo = "Campo requerido";
 
@@ -152,6 +162,9 @@ export default function EditarUsuarioScreen() {
       : styles.inputContainer,
     containerStyle: styles.inputWrapper,
   });
+  const usernameRequirements = getUsernameRequirements(
+    form.nombre_usuario.trim(),
+  );
   const passwordRequirements = getPasswordRequirements(form.contrasena);
   const passwordChangeIsValid =
     !form.contrasena ||
@@ -237,6 +250,22 @@ export default function EditarUsuarioScreen() {
               autoCapitalize="none"
               {...inputProps("nombre_usuario")}
             />
+            <View style={styles.passwordRules}>
+              <Text style={styles.passwordRulesTitle}>
+                Tu nombre de usuario debe cumplir:
+              </Text>
+              {usernameRequirements.map((requirement) => (
+                <Text
+                  key={requirement.key}
+                  style={[
+                    styles.passwordRule,
+                    requirement.isValid && styles.passwordRuleValid,
+                  ]}
+                >
+                  {requirement.isValid ? "✓" : "•"} {requirement.label}
+                </Text>
+              ))}
+            </View>
 
             <Text style={styles.fieldLabel}>
               NOMBRE COMPLETO <Text style={styles.req}>*</Text>
@@ -275,12 +304,15 @@ export default function EditarUsuarioScreen() {
 
             <Text style={styles.fieldLabel}>NUEVA CONTRASEÑA</Text>
             <Input
-              placeholder="Mínimo 12 caracteres"
+              placeholder="Mínimo 8 caracteres"
               secureTextEntry
               {...inputProps("contrasena")}
             />
             {form.contrasena ? (
               <View style={styles.passwordRules}>
+                <Text style={styles.passwordRulesTitle}>
+                  Tu contraseña debe cumplir:
+                </Text>
                 {passwordRequirements.map((requirement) => (
                   <Text
                     key={requirement.key}
@@ -301,6 +333,21 @@ export default function EditarUsuarioScreen() {
               secureTextEntry
               {...inputProps("confirmar")}
             />
+            {form.contrasena ? (
+              <Text
+                style={[
+                  styles.passwordMatch,
+                  form.confirmar &&
+                    form.contrasena === form.confirmar &&
+                    styles.passwordRuleValid,
+                ]}
+              >
+                {form.confirmar && form.contrasena === form.confirmar
+                  ? "✓"
+                  : "•"}{" "}
+                Las contraseñas coinciden
+              </Text>
+            ) : null}
           </View>
 
           {/* Botones */}
@@ -427,12 +474,24 @@ const styles = StyleSheet.create({
     paddingVertical: sp(10),
     marginBottom: sp(12),
   },
+  passwordRulesTitle: {
+    color: Colors.primary,
+    fontSize: fs(12),
+    fontWeight: "700",
+    marginBottom: sp(8),
+  },
   passwordRule: {
     color: "#993C1D",
     fontSize: fs(12),
     marginBottom: sp(4),
   },
   passwordRuleValid: { color: "#0F6E56" },
+  passwordMatch: {
+    color: "#993C1D",
+    fontSize: fs(12),
+    marginLeft: sp(10),
+    marginBottom: sp(12),
+  },
   inputContainer: {
     borderWidth: 1,
     borderColor: Colors.border,

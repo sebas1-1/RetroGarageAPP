@@ -19,6 +19,10 @@ import {
   getMissingPasswordRequirements,
   getPasswordRequirements,
 } from "../../utils/passwordValidation";
+import {
+  getMissingUsernameRequirements,
+  getUsernameRequirements,
+} from "../../utils/usernameValidation";
 
 // Pantalla para crear un usuario administrativo.
 export default function NuevoUsuarioScreen() {
@@ -31,6 +35,8 @@ export default function NuevoUsuarioScreen() {
     nombre_completo: "",
     correo: "",
     telefono: "",
+    respuesta1: "",
+    respuesta2: "",
     contrasena: "",
     confirmar: "",
   });
@@ -70,12 +76,22 @@ export default function NuevoUsuarioScreen() {
 
     if (!form.id_rol) e.id_rol = "Seleccione un rol";
 
-    if (!form.nombre_usuario.trim()) e.nombre_usuario = "Campo requerido";
+    const missingUsernameRequirements = getMissingUsernameRequirements(
+      form.nombre_usuario.trim(),
+    );
+    if (missingUsernameRequirements.length > 0)
+      e.nombre_usuario = `Falta: ${missingUsernameRequirements
+        .map((requirement) => requirement.label)
+        .join(", ")}`;
 
     if (!form.nombre_completo.trim()) e.nombre_completo = "Campo requerido";
 
     if (!form.correo.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo))
       e.correo = "Correo inválido";
+
+    if (!form.respuesta1.trim()) e.respuesta1 = "Campo requerido";
+
+    if (!form.respuesta2.trim()) e.respuesta2 = "Campo requerido";
 
     const missingPasswordRequirements = getMissingPasswordRequirements(
       form.contrasena,
@@ -104,6 +120,8 @@ export default function NuevoUsuarioScreen() {
         correo: form.correo,
         telefono: form.telefono || null,
         contrasena: form.contrasena,
+        respuesta1: form.respuesta1.trim(),
+        respuesta2: form.respuesta2.trim(),
       });
       setMessageDialog({
         title: "Listo",
@@ -127,10 +145,17 @@ export default function NuevoUsuarioScreen() {
       : styles.inputContainer,
     containerStyle: styles.inputWrapper,
   });
+  const usernameRequirements = getUsernameRequirements(
+    form.nombre_usuario.trim(),
+  );
   const passwordRequirements = getPasswordRequirements(form.contrasena);
-  const canSave =
-    passwordRequirements.every((requirement) => requirement.isValid) &&
-    form.contrasena === form.confirmar;
+  const canSave = Boolean(
+    usernameRequirements.every((requirement) => requirement.isValid) &&
+    form.respuesta1.trim() &&
+      form.respuesta2.trim() &&
+      passwordRequirements.every((requirement) => requirement.isValid) &&
+      form.contrasena === form.confirmar,
+  );
 
   return (
     <KeyboardAvoidingView
@@ -211,6 +236,22 @@ export default function NuevoUsuarioScreen() {
               autoCapitalize="none"
               {...inputProps("nombre_usuario")}
             />
+            <View style={styles.passwordRules}>
+              <Text style={styles.passwordRulesTitle}>
+                Tu nombre de usuario debe cumplir:
+              </Text>
+              {usernameRequirements.map((requirement) => (
+                <Text
+                  key={requirement.key}
+                  style={[
+                    styles.passwordRule,
+                    requirement.isValid && styles.passwordRuleValid,
+                  ]}
+                >
+                  {requirement.isValid ? "✓" : "•"} {requirement.label}
+                </Text>
+              ))}
+            </View>
 
             <Text style={styles.fieldLabel}>
               NOMBRE COMPLETO <Text style={styles.req}>*</Text>
@@ -236,6 +277,18 @@ export default function NuevoUsuarioScreen() {
               keyboardType="phone-pad"
               {...inputProps("telefono")}
             />
+
+            <Text style={styles.fieldLabel}>
+              ¿CUÁL ES EL NOMBRE DE TU PRIMERA MASCOTA?{" "}
+              <Text style={styles.req}>*</Text>
+            </Text>
+            <Input placeholder="Ej. Rocky" {...inputProps("respuesta1")} />
+
+            <Text style={styles.fieldLabel}>
+              ¿EN QUÉ CIUDAD O PUEBLO NACISTE?{" "}
+              <Text style={styles.req}>*</Text>
+            </Text>
+            <Input placeholder="Ej. Cartago" {...inputProps("respuesta2")} />
           </View>
 
           <View style={styles.divider} />
@@ -248,11 +301,14 @@ export default function NuevoUsuarioScreen() {
               CONTRASEÑA <Text style={styles.req}>*</Text>
             </Text>
             <Input
-              placeholder="Mínimo 12 caracteres"
+              placeholder="Mínimo 8 caracteres"
               secureTextEntry
               {...inputProps("contrasena")}
             />
             <View style={styles.passwordRules}>
+              <Text style={styles.passwordRulesTitle}>
+                Tu contraseña debe cumplir:
+              </Text>
               {passwordRequirements.map((requirement) => (
                 <Text
                   key={requirement.key}
@@ -274,6 +330,19 @@ export default function NuevoUsuarioScreen() {
               secureTextEntry
               {...inputProps("confirmar")}
             />
+            <Text
+              style={[
+                styles.passwordMatch,
+                form.confirmar &&
+                  form.contrasena === form.confirmar &&
+                  styles.passwordRuleValid,
+              ]}
+            >
+              {form.confirmar && form.contrasena === form.confirmar
+                ? "✓"
+                : "•"}{" "}
+              Las contraseñas coinciden
+            </Text>
           </View>
 
           {/* Botones */}
@@ -393,12 +462,24 @@ const styles = StyleSheet.create({
     paddingVertical: sp(10),
     marginBottom: sp(12),
   },
+  passwordRulesTitle: {
+    color: Colors.primary,
+    fontSize: fs(12),
+    fontWeight: "700",
+    marginBottom: sp(8),
+  },
   passwordRule: {
     color: "#993C1D",
     fontSize: fs(12),
     marginBottom: sp(4),
   },
   passwordRuleValid: { color: "#0F6E56" },
+  passwordMatch: {
+    color: "#993C1D",
+    fontSize: fs(12),
+    marginLeft: sp(10),
+    marginBottom: sp(12),
+  },
   inputContainer: {
     borderWidth: 1,
     borderColor: Colors.border,

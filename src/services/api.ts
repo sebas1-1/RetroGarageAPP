@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // URL base para las llamadas hechas con Axios.
-const API_URL = "http://192.168.100.23:3000/api";
+const API_URL = "http://localhost:3001/api";
 
 // Cliente HTTP compartido: evita repetir URL, timeout y headers.
 const api = axios.create({

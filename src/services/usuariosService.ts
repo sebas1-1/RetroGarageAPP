@@ -1,7 +1,7 @@
 import { apiFetch } from "./apiFetch";
 
 const BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || "http://192.168.100.23:3001/api";
+  process.env.EXPO_PUBLIC_API_URL || "http://localhost:3001/api";
 
 // Usuario administrativo que puede operar el sistema.
 export interface Usuario {

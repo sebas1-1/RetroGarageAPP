@@ -42,6 +42,7 @@ export type LoginInput = {
 export type VerificarOtpInput = {
   tempToken: string;
   codigo: string;
+  metodo: "google" | "retrogarage";
 };
 
 export type SolicitarRecuperacionInput = {

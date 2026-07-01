@@ -18,6 +18,16 @@ import { fs, sp } from "../constants/responsive";
 import { setCurrentUserId } from "../services/authSession";
 import { usuariosService } from "../services/usuariosService";
 import {
+  getRetroAuthenticatorSecret,
+  saveRetroAuthenticatorSecret,
+} from "../utils/retroAuthenticatorStore";
+import {
+  hasRetroAuthenticatorPin,
+  setupRetroAuthenticatorPin,
+  verifyRetroAuthenticatorPin,
+} from "../utils/retroAuthenticatorPin";
+import { generateTotp, getTotpSecondsRemaining } from "../utils/totp";
+import {
   getMissingPasswordRequirements,
   getPasswordRequirements,
 } from "../utils/passwordValidation";
@@ -25,6 +35,9 @@ import {
   getMissingUsernameRequirements,
   getUsernameRequirements,
 } from "../utils/usernameValidation";
+
+type OtpMethod = "google" | "retrogarage";
+type RetroPinStatus = "checking" | "setup" | "locked" | "unlocked";
 
 // Pantalla inicial: login real y solicitud de cuenta sin rol asignado.
 export default function LoginScreen() {
@@ -41,9 +54,24 @@ export default function LoginScreen() {
   const [otpPendiente, setOtpPendiente] = useState<{
     tempToken: string;
     setupRequired: boolean;
-    secret?: string;
+    googleSetupRequired?: boolean;
+    retroSetupRequired?: boolean;
+    methods?: OtpMethod[];
+    accountKey?: string;
+    accountLabel?: string;
+    googleSecret?: string;
+    retroSecret?: string;
     otpauthUrl?: string;
   } | null>(null);
+  const [selectedOtpMethod, setSelectedOtpMethod] =
+    useState<OtpMethod>("google");
+  const [retroSecret, setRetroSecret] = useState<string | null>(null);
+  const [retroCode, setRetroCode] = useState("");
+  const [retroSecondsRemaining, setRetroSecondsRemaining] = useState(30);
+  const [retroPinStatus, setRetroPinStatus] =
+    useState<RetroPinStatus>("checking");
+  const [retroPin, setRetroPin] = useState("");
+  const [retroPinConfirm, setRetroPinConfirm] = useState("");
   const [nombreUsuario, setNombreUsuario] = useState("");
   const [nombreCompleto, setNombreCompleto] = useState("");
   const [correo, setCorreo] = useState("");
@@ -73,18 +101,108 @@ export default function LoginScreen() {
     return () => clearInterval(interval);
   }, [loginBlockedSeconds]);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadRetroSecret = async () => {
+      if (!otpPendiente || selectedOtpMethod !== "retrogarage") return;
+
+      if (otpPendiente.retroSecret) {
+        setRetroSecret(otpPendiente.retroSecret);
+        return;
+      }
+
+      if (!otpPendiente.accountKey) {
+        setRetroSecret(null);
+        return;
+      }
+
+      const savedSecret = await getRetroAuthenticatorSecret(
+        otpPendiente.accountKey,
+      );
+      if (active) setRetroSecret(savedSecret);
+    };
+
+    loadRetroSecret();
+
+    return () => {
+      active = false;
+    };
+  }, [otpPendiente, selectedOtpMethod]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadPinStatus = async () => {
+      if (
+        !otpPendiente?.accountKey ||
+        selectedOtpMethod !== "retrogarage" ||
+        !retroSecret
+      ) {
+        setRetroPinStatus("checking");
+        return;
+      }
+
+      const hasPin = await hasRetroAuthenticatorPin(otpPendiente.accountKey);
+      if (active) setRetroPinStatus(hasPin ? "locked" : "setup");
+    };
+
+    loadPinStatus();
+
+    return () => {
+      active = false;
+    };
+  }, [otpPendiente?.accountKey, retroSecret, selectedOtpMethod]);
+
+  useEffect(() => {
+    if (
+      !otpPendiente ||
+      selectedOtpMethod !== "retrogarage" ||
+      !retroSecret ||
+      retroPinStatus !== "unlocked"
+    ) {
+      return;
+    }
+
+    const refreshCode = () => {
+      const timestamp = Date.now();
+      const code = generateTotp(retroSecret, timestamp);
+      setRetroSecondsRemaining(getTotpSecondsRemaining(timestamp));
+
+      if (code) {
+        setRetroCode(code);
+        setCodigoOtp(code);
+      }
+    };
+
+    refreshCode();
+    const interval = setInterval(refreshCode, 1000);
+
+    return () => clearInterval(interval);
+  }, [otpPendiente, retroPinStatus, retroSecret, selectedOtpMethod]);
+
   const loginBloqueado = loginBlockedSeconds > 0;
   const loginBlockMessage = loginBloqueado
     ? `Demasiados intentos fallidos. Intente nuevamente en ${Math.floor(
         loginBlockedSeconds / 60,
       )}:${String(loginBlockedSeconds % 60).padStart(2, "0")}.`
     : "";
+  const retroAuthenticatorUnavailable =
+    selectedOtpMethod === "retrogarage" &&
+    (!retroSecret || retroPinStatus !== "unlocked");
 
   const limpiar = () => {
     setUsuario("");
     setContrasena("");
     setCodigoOtp("");
     setOtpPendiente(null);
+    setSelectedOtpMethod("google");
+    setRetroSecret(null);
+    setRetroCode("");
+    setRetroSecondsRemaining(30);
+    setRetroPinStatus("checking");
+    setRetroPin("");
+    setRetroPinConfirm("");
     setNombreUsuario("");
     setNombreCompleto("");
     setCorreo("");
@@ -136,18 +254,42 @@ export default function LoginScreen() {
       });
 
       if (response.requiresOtp) {
-        setOtpPendiente({
+        const pendingOtp = {
           tempToken: response.tempToken,
           setupRequired: Boolean(response.setupRequired),
-          secret: response.secret,
+          googleSetupRequired: Boolean(response.googleSetupRequired),
+          retroSetupRequired: Boolean(response.retroSetupRequired),
+          methods: response.methods || ["google", "retrogarage"],
+          accountKey: response.accountKey,
+          accountLabel: response.accountLabel,
+          googleSecret: response.googleSecret,
+          retroSecret: response.retroSecret,
           otpauthUrl: response.otpauthUrl,
+        };
+
+        setOtpPendiente({
+          ...pendingOtp,
         });
+        setSelectedOtpMethod("google");
+        setRetroSecret(response.retroSecret || null);
+        setRetroCode("");
+        setRetroPinStatus("checking");
+        setRetroPin("");
+        setRetroPinConfirm("");
         setCodigoOtp("");
+
+        if (response.retroSecret && response.accountKey) {
+          await saveRetroAuthenticatorSecret(
+            response.accountKey,
+            response.retroSecret,
+          );
+        }
+
         setMessageDialog({
-          title: response.setupRequired
+          title: response.googleSetupRequired
             ? "Configura Google Authenticator"
             : "Verificación requerida",
-          message: response.setupRequired
+          message: response.googleSetupRequired
             ? "Escanea el QR o ingresa la clave manual en Google Authenticator. Luego escribe el código de 6 dígitos."
             : "Ingrese el código de 6 dígitos de Google Authenticator.",
         });
@@ -175,10 +317,30 @@ export default function LoginScreen() {
   };
 
   const handleVerificarOtp = async () => {
+    if (selectedOtpMethod === "retrogarage" && !retroSecret) {
+      setMessageDialog({
+        title: "Autenticador no configurado",
+        message:
+          "Configure el Autenticador RetroGarage en este dispositivo antes de usar esta opción.",
+      });
+      return;
+    }
+
+    if (selectedOtpMethod === "retrogarage" && retroPinStatus !== "unlocked") {
+      setMessageDialog({
+        title: "PIN requerido",
+        message: "Desbloquee el Autenticador RetroGarage con su PIN.",
+      });
+      return;
+    }
+
     if (!otpPendiente || codigoOtp.trim().length !== 6) {
       setMessageDialog({
         title: "Código incompleto",
-        message: "Ingrese el código de 6 dígitos de Google Authenticator.",
+        message:
+          selectedOtpMethod === "retrogarage"
+            ? "Espere a que se genere el código de 6 dígitos."
+            : "Ingrese el código de 6 dígitos de Google Authenticator.",
       });
       return;
     }
@@ -188,6 +350,7 @@ export default function LoginScreen() {
       const response = await usuariosService.verificarOtp({
         tempToken: otpPendiente.tempToken,
         codigo: codigoOtp.trim(),
+        metodo: selectedOtpMethod,
       });
       setCurrentUserId(response.usuario?.id_usuario);
       setOtpPendiente(null);
@@ -201,6 +364,50 @@ export default function LoginScreen() {
     } finally {
       setCargando(false);
     }
+  };
+
+
+  const handleCrearRetroPin = async () => {
+    if (!otpPendiente?.accountKey) return;
+    if (!/^\d{4,8}$/.test(retroPin)) {
+      setMessageDialog({
+        title: "PIN inválido",
+        message: "Use un PIN numérico de 4 a 8 dígitos.",
+      });
+      return;
+    }
+    if (retroPin !== retroPinConfirm) {
+      setMessageDialog({
+        title: "PIN distinto",
+        message: "La confirmación debe coincidir con el PIN.",
+      });
+      return;
+    }
+
+    await setupRetroAuthenticatorPin(otpPendiente.accountKey, retroPin);
+    setRetroPin("");
+    setRetroPinConfirm("");
+    setRetroPinStatus("unlocked");
+  };
+
+  const handleDesbloquearRetroPin = async () => {
+    if (!otpPendiente?.accountKey) return;
+
+    const isValid = await verifyRetroAuthenticatorPin(
+      otpPendiente.accountKey,
+      retroPin,
+    );
+
+    if (!isValid) {
+      setMessageDialog({
+        title: "PIN incorrecto",
+        message: "Revise el PIN e intente nuevamente.",
+      });
+      return;
+    }
+
+    setRetroPin("");
+    setRetroPinStatus("unlocked");
   };
 
 
@@ -790,7 +997,58 @@ export default function LoginScreen() {
 
               {modo === "login" && otpPendiente && (
                 <View style={styles.otpBox}>
-                  {otpPendiente.setupRequired && (
+                  <View style={styles.otpMethodRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.otpMethodBtn,
+                        selectedOtpMethod === "google" &&
+                          styles.otpMethodBtnActive,
+                      ]}
+                      onPress={() => {
+                        setSelectedOtpMethod("google");
+                        setCodigoOtp("");
+                      }}
+                      activeOpacity={0.85}
+                    >
+                      <Text
+                        style={[
+                          styles.otpMethodText,
+                          selectedOtpMethod === "google" &&
+                            styles.otpMethodTextActive,
+                        ]}
+                      >
+                        GOOGLE
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.otpMethodBtn,
+                        selectedOtpMethod === "retrogarage" &&
+                          styles.otpMethodBtnActive,
+                      ]}
+                      onPress={() => {
+                        setSelectedOtpMethod("retrogarage");
+                        setCodigoOtp(
+                          retroSecret && retroPinStatus === "unlocked"
+                            ? retroCode
+                            : "",
+                        );
+                      }}
+                      activeOpacity={0.85}
+                    >
+                      <Text
+                        style={[
+                          styles.otpMethodText,
+                          selectedOtpMethod === "retrogarage" &&
+                            styles.otpMethodTextActive,
+                        ]}
+                      >
+                        RETROGARAGE
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {otpPendiente.googleSetupRequired && (
                     <>
                       <Text style={styles.otpText}>
                         Escanea este QR con Google Authenticator o usa la clave
@@ -807,27 +1065,115 @@ export default function LoginScreen() {
                           resizeMode="contain"
                         />
                       ) : null}
-                      {otpPendiente.secret ? (
+                      {otpPendiente.googleSecret ? (
                         <Text style={styles.otpSecret}>
-                          {otpPendiente.secret}
+                          {otpPendiente.googleSecret}
                         </Text>
                       ) : null}
                     </>
                   )}
 
-                  <Text style={styles.sectionLabel}>CÓDIGO AUTHENTICATOR</Text>
+                  {selectedOtpMethod === "retrogarage" ? (
+                    <View style={styles.retroOtpPanel}>
+                      <Text style={styles.retroOtpLabel}>
+                        AUTENTICADOR RETROGARAGE
+                      </Text>
+                      {retroSecret ? (
+                        retroPinStatus === "unlocked" ? (
+                          <>
+                            <Text style={styles.retroOtpCode}>
+                              {retroCode || "------"}
+                            </Text>
+                            <Text style={styles.retroOtpTimer}>
+                              Cambia en {retroSecondsRemaining}s
+                            </Text>
+                          </>
+                        ) : (
+                          <View style={styles.retroPinBox}>
+                            <Text style={styles.retroOtpMissing}>
+                              {retroPinStatus === "setup"
+                                ? "Cree un PIN local para proteger este autenticador."
+                                : "Ingrese su PIN RetroGarage para ver el codigo."}
+                            </Text>
+                            <TextInput
+                              style={[styles.input, styles.retroPinInput]}
+                              placeholder="PIN"
+                              placeholderTextColor={Colors.gray}
+                              keyboardType="number-pad"
+                              secureTextEntry
+                              maxLength={8}
+                              value={retroPin}
+                              onChangeText={(value) =>
+                                setRetroPin(value.replace(/\D/g, "").slice(0, 8))
+                              }
+                            />
+                            {retroPinStatus === "setup" ? (
+                              <TextInput
+                                style={[styles.input, styles.retroPinInput]}
+                                placeholder="Confirmar PIN"
+                                placeholderTextColor={Colors.gray}
+                                keyboardType="number-pad"
+                                secureTextEntry
+                                maxLength={8}
+                                value={retroPinConfirm}
+                                onChangeText={(value) =>
+                                  setRetroPinConfirm(
+                                    value.replace(/\D/g, "").slice(0, 8),
+                                  )
+                                }
+                              />
+                            ) : null}
+                            <TouchableOpacity
+                              style={styles.retroPinButton}
+                              onPress={
+                                retroPinStatus === "setup"
+                                  ? handleCrearRetroPin
+                                  : handleDesbloquearRetroPin
+                              }
+                              activeOpacity={0.85}
+                            >
+                              <Text style={styles.retroPinButtonText}>
+                                {retroPinStatus === "setup"
+                                  ? "CREAR PIN"
+                                  : "DESBLOQUEAR"}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        )
+                      ) : (
+                        <Text style={styles.retroOtpMissing}>
+                          Esta cuenta no tiene RetroGarage configurado en este
+                          dispositivo. Use Google Authenticator o reinicie la
+                          configuración OTP.
+                        </Text>
+                      )}
+                    </View>
+                  ) : null}
+
+                  <Text style={styles.sectionLabel}>
+                    {selectedOtpMethod === "retrogarage"
+                      ? "CÓDIGO RETROGARAGE"
+                      : "CÓDIGO AUTHENTICATOR"}
+                  </Text>
                   <TextInput
                     style={inputStyle("codigoOtp")}
                     placeholder="123456"
                     placeholderTextColor={Colors.gray}
                     keyboardType="number-pad"
                     maxLength={6}
-                    value={codigoOtp}
+                    value={
+                      selectedOtpMethod === "retrogarage"
+                        ? retroPinStatus === "unlocked"
+                          ? retroCode
+                          : ""
+                        : codigoOtp
+                    }
                     onChangeText={(value) =>
                       setCodigoOtp(value.replace(/\D/g, "").slice(0, 6))
                     }
                     onFocus={() => setFocused("codigoOtp")}
                     onBlur={() => setFocused("")}
+                    editable={selectedOtpMethod === "google"}
                   />
                 </View>
               )}
@@ -888,6 +1234,7 @@ export default function LoginScreen() {
               styles.boton,
               (cargando ||
                 (modo === "login" && loginBloqueado) ||
+                (modo === "login" && retroAuthenticatorUnavailable) ||
                 (modo === "login" &&
                   otpPendiente !== null &&
                   codigoOtp.trim().length !== 6) ||
@@ -909,6 +1256,7 @@ export default function LoginScreen() {
             disabled={
               cargando ||
               (modo === "login" && loginBloqueado) ||
+              (modo === "login" && retroAuthenticatorUnavailable) ||
               (modo === "login" &&
                 otpPendiente !== null &&
                 codigoOtp.trim().length !== 6) ||
@@ -1161,6 +1509,58 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     textAlign: "center",
     marginBottom: sp(14),
+  },
+  retroOtpPanel: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: sp(10),
+    paddingHorizontal: sp(12),
+    paddingVertical: sp(12),
+    marginBottom: sp(14),
+    alignItems: "center",
+  },
+  retroOtpLabel: {
+    color: Colors.gray,
+    fontSize: fs(10),
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    marginBottom: sp(8),
+  },
+  retroOtpCode: {
+    color: Colors.primary,
+    fontSize: fs(28),
+    fontWeight: "700",
+    letterSpacing: 5,
+  },
+  retroOtpTimer: {
+    color: Colors.gray,
+    fontSize: fs(12),
+    marginTop: sp(4),
+  },
+  retroOtpMissing: {
+    color: "#993C1D",
+    fontSize: fs(12),
+    textAlign: "center",
+  },
+  retroPinBox: {
+    alignSelf: "stretch",
+    gap: sp(10),
+  },
+  retroPinInput: {
+    alignSelf: "stretch",
+    textAlign: "center",
+  },
+  retroPinButton: {
+    alignItems: "center",
+    backgroundColor: Colors.primary,
+    borderRadius: sp(8),
+    paddingVertical: sp(11),
+  },
+  retroPinButtonText: {
+    color: Colors.cream,
+    fontSize: fs(11),
+    fontWeight: "700",
+    letterSpacing: 1.5,
   },
   securityQuestion: {
     color: Colors.primary,

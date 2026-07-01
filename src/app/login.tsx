@@ -36,6 +36,13 @@ export default function LoginScreen() {
   const [cargando, setCargando] = useState(false);
   const [usuario, setUsuario] = useState("");
   const [contrasena, setContrasena] = useState("");
+  const [codigoOtp, setCodigoOtp] = useState("");
+  const [otpPendiente, setOtpPendiente] = useState<{
+    tempToken: string;
+    setupRequired: boolean;
+    secret?: string;
+    otpauthUrl?: string;
+  } | null>(null);
   const [nombreUsuario, setNombreUsuario] = useState("");
   const [nombreCompleto, setNombreCompleto] = useState("");
   const [correo, setCorreo] = useState("");
@@ -58,6 +65,8 @@ export default function LoginScreen() {
   const limpiar = () => {
     setUsuario("");
     setContrasena("");
+    setCodigoOtp("");
+    setOtpPendiente(null);
     setNombreUsuario("");
     setNombreCompleto("");
     setCorreo("");
@@ -80,6 +89,11 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
+    if (otpPendiente) {
+      await handleVerificarOtp();
+      return;
+    }
+
     if (!usuario.trim() || !contrasena) {
       setMessageDialog({
         title: "Datos incompletos",
@@ -94,12 +108,61 @@ export default function LoginScreen() {
         usuario: usuario.trim(),
         contrasena,
       });
+
+      if (response.requiresOtp) {
+        setOtpPendiente({
+          tempToken: response.tempToken,
+          setupRequired: Boolean(response.setupRequired),
+          secret: response.secret,
+          otpauthUrl: response.otpauthUrl,
+        });
+        setCodigoOtp("");
+        setMessageDialog({
+          title: response.setupRequired
+            ? "Configura Google Authenticator"
+            : "Verificación requerida",
+          message: response.setupRequired
+            ? "Escanea el QR o ingresa la clave manual en Google Authenticator. Luego escribe el código de 6 dígitos."
+            : "Ingrese el código de 6 dígitos de Google Authenticator.",
+        });
+        return;
+      }
+
       setCurrentUserId(response.usuario?.id_usuario);
       router.replace("/dashboard" as any);
     } catch (e: any) {
       setMessageDialog({
         title: "No se pudo iniciar sesión",
         message: e.message || "Revise sus credenciales.",
+      });
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const handleVerificarOtp = async () => {
+    if (!otpPendiente || codigoOtp.trim().length !== 6) {
+      setMessageDialog({
+        title: "Código incompleto",
+        message: "Ingrese el código de 6 dígitos de Google Authenticator.",
+      });
+      return;
+    }
+
+    try {
+      setCargando(true);
+      const response = await usuariosService.verificarOtp({
+        tempToken: otpPendiente.tempToken,
+        codigo: codigoOtp.trim(),
+      });
+      setCurrentUserId(response.usuario?.id_usuario);
+      setOtpPendiente(null);
+      setCodigoOtp("");
+      router.replace("/dashboard" as any);
+    } catch (e: any) {
+      setMessageDialog({
+        title: "No se pudo verificar",
+        message: e.message || "Revise el código e intente nuevamente.",
       });
     } finally {
       setCargando(false);
@@ -605,11 +668,20 @@ export default function LoginScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 value={modo === "login" ? usuario : correo}
-                onChangeText={modo === "login" ? setUsuario : setCorreo}
+                onChangeText={(value) => {
+                  if (modo === "login") {
+                    setUsuario(value);
+                    setOtpPendiente(null);
+                    setCodigoOtp("");
+                  } else {
+                    setCorreo(value);
+                  }
+                }}
                 onFocus={() =>
                   setFocused(modo === "login" ? "usuario" : "correo")
                 }
                 onBlur={() => setFocused("")}
+                editable={modo !== "login" || !otpPendiente}
               />
 
               {modo === "registro" && (
@@ -669,10 +741,59 @@ export default function LoginScreen() {
                 placeholderTextColor={Colors.gray}
                 secureTextEntry
                 value={contrasena}
-                onChangeText={setContrasena}
+                onChangeText={(value) => {
+                  setContrasena(value);
+                  setOtpPendiente(null);
+                  setCodigoOtp("");
+                }}
                 onFocus={() => setFocused("contrasena")}
                 onBlur={() => setFocused("")}
+                editable={!otpPendiente}
               />
+
+              {modo === "login" && otpPendiente && (
+                <View style={styles.otpBox}>
+                  {otpPendiente.setupRequired && (
+                    <>
+                      <Text style={styles.otpText}>
+                        Escanea este QR con Google Authenticator o usa la clave
+                        manual.
+                      </Text>
+                      {otpPendiente.otpauthUrl ? (
+                        <Image
+                          style={styles.otpQr}
+                          source={{
+                            uri: `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                              otpPendiente.otpauthUrl,
+                            )}`,
+                          }}
+                          resizeMode="contain"
+                        />
+                      ) : null}
+                      {otpPendiente.secret ? (
+                        <Text style={styles.otpSecret}>
+                          {otpPendiente.secret}
+                        </Text>
+                      ) : null}
+                    </>
+                  )}
+
+                  <Text style={styles.sectionLabel}>CÓDIGO AUTHENTICATOR</Text>
+                  <TextInput
+                    style={inputStyle("codigoOtp")}
+                    placeholder="123456"
+                    placeholderTextColor={Colors.gray}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    value={codigoOtp}
+                    onChangeText={(value) =>
+                      setCodigoOtp(value.replace(/\D/g, "").slice(0, 6))
+                    }
+                    onFocus={() => setFocused("codigoOtp")}
+                    onBlur={() => setFocused("")}
+                  />
+                </View>
+              )}
 
               {modo === "registro" && (
                 <View style={styles.passwordRules}>
@@ -729,6 +850,9 @@ export default function LoginScreen() {
             style={[
               styles.boton,
               (cargando ||
+                (modo === "login" &&
+                  otpPendiente !== null &&
+                  codigoOtp.trim().length !== 6) ||
                 (modo === "registro" && !canCreateAccount) ||
                 (modo === "recuperacion" &&
                   !(canRequestRecovery || canResetPassword))) &&
@@ -746,6 +870,9 @@ export default function LoginScreen() {
             activeOpacity={0.85}
             disabled={
               cargando ||
+              (modo === "login" &&
+                otpPendiente !== null &&
+                codigoOtp.trim().length !== 6) ||
               (modo === "registro" && !canCreateAccount) ||
               (modo === "recuperacion" &&
                 !(canRequestRecovery || canResetPassword))
@@ -756,8 +883,8 @@ export default function LoginScreen() {
             ) : (
               <Text style={styles.botonTexto}>
                 {modo === "login"
-                  ? needsOtp
-                    ? "VALIDAR CÓDIGO"
+                  ? otpPendiente
+                    ? "VERIFICAR CÓDIGO"
                     : "ENTRAR AL TALLER"
                   : modo === "registro"
                     ? "CREAR CUENTA"
@@ -975,6 +1102,14 @@ const styles = StyleSheet.create({
     height: sp(190),
     alignSelf: "center",
     marginBottom: sp(12),
+  },
+  otpSecret: {
+    color: Colors.primary,
+    fontSize: fs(13),
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    textAlign: "center",
+    marginBottom: sp(14),
   },
   securityQuestion: {
     color: Colors.primary,

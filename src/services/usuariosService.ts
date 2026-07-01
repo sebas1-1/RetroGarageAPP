@@ -39,6 +39,11 @@ export type LoginInput = {
   contrasena: string;
 };
 
+export type VerificarOtpInput = {
+  tempToken: string;
+  codigo: string;
+};
+
 export type SolicitarRecuperacionInput = {
   correo: string;
   pregunta: 1 | 2;
@@ -83,6 +88,13 @@ export const usuariosService = {
   // Valida credenciales contra el backend.
   login: (data: LoginInput) =>
     apiFetch(`${BASE_URL}/usuarios/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).then(handle),
+
+  verificarOtp: (data: VerificarOtpInput) =>
+    apiFetch(`${BASE_URL}/usuarios/login/otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),

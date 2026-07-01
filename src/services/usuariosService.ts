@@ -59,7 +59,19 @@ export type ConfirmarRecuperacionInput = {
 // Convierte la respuesta a JSON y muestra errores claros si algo falla.
 async function handle(res: Response) {
   const json = await res.json();
-  if (!res.ok) throw new Error(json.error || "Error de red");
+  if (!res.ok) {
+    const error = new Error(json.error || "Error de red") as Error & {
+      status?: number;
+      blockedUntil?: string;
+      remainingSeconds?: number;
+      attemptsRemaining?: number;
+    };
+    error.status = res.status;
+    error.blockedUntil = json.blockedUntil;
+    error.remainingSeconds = json.remainingSeconds;
+    error.attemptsRemaining = json.attemptsRemaining;
+    throw error;
+  }
   return json;
 }
 

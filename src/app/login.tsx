@@ -1,6 +1,6 @@
 import { Text } from "@rneui/themed";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -37,6 +37,7 @@ export default function LoginScreen() {
   const [usuario, setUsuario] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [codigoOtp, setCodigoOtp] = useState("");
+  const [loginBlockedSeconds, setLoginBlockedSeconds] = useState(0);
   const [otpPendiente, setOtpPendiente] = useState<{
     tempToken: string;
     setupRequired: boolean;
@@ -61,6 +62,23 @@ export default function LoginScreen() {
     title: string;
     message: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (loginBlockedSeconds <= 0) return;
+
+    const interval = setInterval(() => {
+      setLoginBlockedSeconds((seconds) => Math.max(0, seconds - 1));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [loginBlockedSeconds]);
+
+  const loginBloqueado = loginBlockedSeconds > 0;
+  const loginBlockMessage = loginBloqueado
+    ? `Demasiados intentos fallidos. Intente nuevamente en ${Math.floor(
+        loginBlockedSeconds / 60,
+      )}:${String(loginBlockedSeconds % 60).padStart(2, "0")}.`
+    : "";
 
   const limpiar = () => {
     setUsuario("");
@@ -91,6 +109,14 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     if (otpPendiente) {
       await handleVerificarOtp();
+      return;
+    }
+
+    if (loginBloqueado) {
+      setMessageDialog({
+        title: "Acceso bloqueado",
+        message: loginBlockMessage,
+      });
       return;
     }
 
@@ -129,10 +155,18 @@ export default function LoginScreen() {
       }
 
       setCurrentUserId(response.usuario?.id_usuario);
+      setLoginBlockedSeconds(0);
       router.replace("/dashboard" as any);
     } catch (e: any) {
+      if (e.status === 423 || e.blockedUntil) {
+        setLoginBlockedSeconds(Number(e.remainingSeconds || 180));
+      }
+
       setMessageDialog({
-        title: "No se pudo iniciar sesión",
+        title:
+          e.status === 423 || e.blockedUntil
+            ? "Acceso bloqueado"
+            : "No se pudo iniciar sesión",
         message: e.message || "Revise sus credenciales.",
       });
     } finally {
@@ -407,6 +441,9 @@ export default function LoginScreen() {
                 ? "Solicita una cuenta para que el admin asigne tu rol"
                 : "Verifica tu identidad y crea una nueva contraseña"}
           </Text>
+          {modo === "login" && loginBloqueado ? (
+            <Text style={styles.loginBlockNotice}>{loginBlockMessage}</Text>
+          ) : null}
 
           {modo !== "recuperacion" ? (
             <View style={styles.modeRow}>
@@ -850,6 +887,7 @@ export default function LoginScreen() {
             style={[
               styles.boton,
               (cargando ||
+                (modo === "login" && loginBloqueado) ||
                 (modo === "login" &&
                   otpPendiente !== null &&
                   codigoOtp.trim().length !== 6) ||
@@ -870,6 +908,7 @@ export default function LoginScreen() {
             activeOpacity={0.85}
             disabled={
               cargando ||
+              (modo === "login" && loginBloqueado) ||
               (modo === "login" &&
                 otpPendiente !== null &&
                 codigoOtp.trim().length !== 6) ||
@@ -978,6 +1017,18 @@ const styles = StyleSheet.create({
     fontSize: fs(13),
     color: Colors.gray,
     marginBottom: sp(20),
+  },
+  loginBlockNotice: {
+    backgroundColor: "#FFF3E8",
+    borderColor: "#D9742F",
+    borderRadius: sp(10),
+    borderWidth: 1,
+    color: "#993C1D",
+    fontSize: fs(12),
+    fontWeight: "600",
+    marginBottom: sp(16),
+    paddingHorizontal: sp(12),
+    paddingVertical: sp(10),
   },
   modeRow: {
     flexDirection: "row",

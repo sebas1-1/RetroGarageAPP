@@ -13,10 +13,12 @@ import {
 } from "react-native";
 import { DatePickerField } from "../../components/shared/DatePickerField";
 import { MessageDialog } from "../../components/shared/MessageDialog";
+import { SelectField } from "../../components/shared/SelectField";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Auto, AutoInput, autosService } from "../../services/autosService";
 import { clientesService } from "../../services/clientesService";
+import { geografiaService, OpcionGeografica } from "../../services/geografiaService";
 
 type AutoForm = {
   marca: string;
@@ -46,11 +48,18 @@ export default function EditarClienteScreen() {
     fecha_nacimiento: "",
     correo: "",
     telefono: "",
-    provincia: "",
-    canton: "",
+    id_pais: null as number | null,
+    id_provincia: null as number | null,
+    id_canton: null as number | null,
+    id_distrito: null as number | null,
     notas: "",
   });
   const [autos, setAutos] = useState<AutoForm[]>([]);
+  const [paises, setPaises] = useState<OpcionGeografica[]>([]);
+  const [provincias, setProvincias] = useState<OpcionGeografica[]>([]);
+  const [cantones, setCantones] = useState<OpcionGeografica[]>([]);
+  const [distritos, setDistritos] = useState<OpcionGeografica[]>([]);
+  const [cargandoUbicacion, setCargandoUbicacion] = useState(false);
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [messageDialog, setMessageDialog] = useState<{
     title: string;
@@ -70,7 +79,9 @@ export default function EditarClienteScreen() {
 
   // Carga el cliente cuando llega el id por la ruta.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability
     cargarCliente();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // Obtiene el cliente desde la API y llena el formulario.
@@ -78,6 +89,16 @@ export default function EditarClienteScreen() {
     try {
       setCargando(true);
       const data = await clientesService.getById(Number(id));
+      const [paisesData, provinciasData, cantonesData, distritosData] = await Promise.all([
+        geografiaService.getPaises(),
+        data.id_pais ? geografiaService.getProvincias(data.id_pais) : Promise.resolve([]),
+        data.id_provincia ? geografiaService.getCantones(data.id_provincia) : Promise.resolve([]),
+        data.id_canton ? geografiaService.getDistritos(data.id_canton) : Promise.resolve([]),
+      ]);
+      setPaises(paisesData);
+      setProvincias(provinciasData);
+      setCantones(cantonesData);
+      setDistritos(distritosData);
       const identificacion = data.identificacion ?? "";
       setForm({
         nombre: data.nombre ?? "",
@@ -88,8 +109,10 @@ export default function EditarClienteScreen() {
           : "",
         correo: data.correo ?? "",
         telefono: data.telefono ?? "",
-        provincia: data.provincia ?? "",
-        canton: data.canton ?? "",
+        id_pais: data.id_pais ?? null,
+        id_provincia: data.id_provincia ?? null,
+        id_canton: data.id_canton ?? null,
+        id_distrito: data.id_distrito ?? null,
         notas: data.notas ?? "",
       });
 
@@ -121,6 +144,30 @@ export default function EditarClienteScreen() {
 
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
+
+  const seleccionarPais = async (countryId: number) => {
+    setForm((f) => ({ ...f, id_pais: countryId, id_provincia: null, id_canton: null, id_distrito: null }));
+    setProvincias([]); setCantones([]); setDistritos([]);
+    try { setCargandoUbicacion(true); setProvincias(await geografiaService.getProvincias(countryId)); }
+    catch (e: any) { setMessageDialog({ title: "Error", message: e.message }); }
+    finally { setCargandoUbicacion(false); }
+  };
+
+  const seleccionarProvincia = async (provinceId: number) => {
+    setForm((f) => ({ ...f, id_provincia: provinceId, id_canton: null, id_distrito: null }));
+    setCantones([]); setDistritos([]);
+    try { setCargandoUbicacion(true); setCantones(await geografiaService.getCantones(provinceId)); }
+    catch (e: any) { setMessageDialog({ title: "Error", message: e.message }); }
+    finally { setCargandoUbicacion(false); }
+  };
+
+  const seleccionarCanton = async (cantonId: number) => {
+    setForm((f) => ({ ...f, id_canton: cantonId, id_distrito: null }));
+    setDistritos([]);
+    try { setCargandoUbicacion(true); setDistritos(await geografiaService.getDistritos(cantonId)); }
+    catch (e: any) { setMessageDialog({ title: "Error", message: e.message }); }
+    finally { setCargandoUbicacion(false); }
+  };
 
   const setAuto = (index: number, key: keyof AutoForm) => (val: string) =>
     setAutos((actuales) =>
@@ -215,8 +262,7 @@ export default function EditarClienteScreen() {
         fecha_nacimiento: form.fecha_nacimiento || null,
         correo: form.correo || null,
         telefono: form.telefono,
-        provincia: form.provincia || null,
-        canton: form.canton || null,
+        id_distrito: form.id_distrito,
         notas: form.notas || null,
       });
 
@@ -238,7 +284,7 @@ export default function EditarClienteScreen() {
   };
 
   const inputProps = (key: string) => ({
-    value: form[key as keyof typeof form],
+    value: String(form[key as keyof typeof form] ?? ""),
     onChangeText: set(key),
     errorMessage: errores[key],
     inputStyle: styles.inputText,
@@ -353,11 +399,17 @@ export default function EditarClienteScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>DIRECCIÓN</Text>
 
+            <Text style={styles.fieldLabel}>PAÍS</Text>
+            <SelectField value={form.id_pais} options={paises} placeholder="Seleccioná un país" onChange={seleccionarPais} />
+
             <Text style={styles.fieldLabel}>PROVINCIA</Text>
-            <Input placeholder="Ej. San José" {...inputProps("provincia")} />
+            <SelectField value={form.id_provincia} options={provincias} placeholder="Seleccioná una provincia" onChange={seleccionarProvincia} disabled={!form.id_pais} loading={cargandoUbicacion && !!form.id_pais && provincias.length === 0} />
 
             <Text style={styles.fieldLabel}>CANTÓN / CIUDAD</Text>
-            <Input placeholder="Ej. Escazú" {...inputProps("canton")} />
+            <SelectField value={form.id_canton} options={cantones} placeholder="Seleccioná un cantón" onChange={seleccionarCanton} disabled={!form.id_provincia} loading={cargandoUbicacion && !!form.id_provincia && cantones.length === 0} />
+
+            <Text style={styles.fieldLabel}>DISTRITO</Text>
+            <SelectField value={form.id_distrito} options={distritos} placeholder="Seleccioná un distrito" onChange={(districtId) => setForm((f) => ({ ...f, id_distrito: districtId }))} disabled={!form.id_canton} loading={cargandoUbicacion && !!form.id_canton && distritos.length === 0} />
           </View>
 
           <View style={styles.divider} />

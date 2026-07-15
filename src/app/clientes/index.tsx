@@ -1,7 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Button, Card, Dialog, Input, Text } from "@rneui/themed";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -22,6 +22,7 @@ export default function ClientesScreen() {
   const [cargando, setCargando] = useState(true);
 
   const [busqueda, setBusqueda] = useState("");
+  const primeraBusqueda = useRef(true);
 
   const [clienteAEliminar, setClienteAEliminar] = useState<number | null>(null);
   const [eliminando, setEliminando] = useState(false);
@@ -33,6 +34,7 @@ export default function ClientesScreen() {
   // Recarga clientes al entrar o volver desde otra pantalla.
   useFocusEffect(
     useCallback(() => {
+      // eslint-disable-next-line react-hooks/immutability
       cargarClientes();
     }, []),
   );
@@ -51,6 +53,20 @@ export default function ClientesScreen() {
       setCargando(false);
     }
   };
+
+  // Busca de forma asincrona al dejar de escribir durante 400 ms.
+  useEffect(() => {
+    if (primeraBusqueda.current) {
+      primeraBusqueda.current = false;
+      return;
+    }
+
+    const temporizador = setTimeout(() => {
+      cargarClientes(busqueda.trim());
+    }, 400);
+
+    return () => clearTimeout(temporizador);
+  }, [busqueda]);
 
   // Borra el cliente confirmado y actualiza el listado.
   const eliminarCliente = async () => {
@@ -79,14 +95,6 @@ export default function ClientesScreen() {
     }
   };
 
-  if (cargando) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Clientes</Text>
@@ -105,6 +113,13 @@ export default function ClientesScreen() {
         containerStyle={styles.searchContainer}
         inputContainerStyle={styles.searchInput}
         onSubmitEditing={() => cargarClientes(busqueda)}
+        rightIcon={
+          cargando ? (
+            <ActivityIndicator size="small" color={Colors.primary} />
+          ) : (
+            <MaterialIcons name="search" size={22} color={Colors.gray} />
+          )
+        }
       />
 
       <Button
@@ -174,7 +189,15 @@ export default function ClientesScreen() {
           </Card>
         )}
         ListEmptyComponent={
-          <Text style={styles.empty}>No hay clientes registrados</Text>
+          cargando ? (
+            <ActivityIndicator
+              size="large"
+              color={Colors.primary}
+              style={styles.loadingList}
+            />
+          ) : (
+            <Text style={styles.empty}>No hay clientes registrados</Text>
+          )
         }
       />
 
@@ -255,6 +278,7 @@ const styles = StyleSheet.create({
     color: Colors.gray,
     fontSize: fs(14),
   },
+  loadingList: { marginTop: sp(40) },
   iconButton: { width: sp(50) },
   btnBuscar: {
     backgroundColor: Colors.primary,

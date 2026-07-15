@@ -1,7 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Input, Text } from "@rneui/themed";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,10 +12,12 @@ import {
 } from "react-native";
 import { DatePickerField } from "../../components/shared/DatePickerField";
 import { MessageDialog } from "../../components/shared/MessageDialog";
+import { SelectField } from "../../components/shared/SelectField";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { AutoInput, autosService } from "../../services/autosService";
 import { clientesService } from "../../services/clientesService";
+import { geografiaService, OpcionGeografica } from "../../services/geografiaService";
 
 type AutoForm = {
   marca: string;
@@ -42,11 +44,18 @@ export default function NuevoClienteScreen() {
     fecha_nacimiento: "",
     correo: "",
     telefono: "",
-    provincia: "",
-    canton: "",
+    id_pais: null as number | null,
+    id_provincia: null as number | null,
+    id_canton: null as number | null,
+    id_distrito: null as number | null,
     notas: "",
   });
   const [autos, setAutos] = useState<AutoForm[]>([]);
+  const [paises, setPaises] = useState<OpcionGeografica[]>([]);
+  const [provincias, setProvincias] = useState<OpcionGeografica[]>([]);
+  const [cantones, setCantones] = useState<OpcionGeografica[]>([]);
+  const [distritos, setDistritos] = useState<OpcionGeografica[]>([]);
+  const [cargandoUbicacion, setCargandoUbicacion] = useState(false);
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [messageDialog, setMessageDialog] = useState<{
     title: string;
@@ -63,6 +72,36 @@ export default function NuevoClienteScreen() {
   const yesterday = new Date();
   yesterday.setHours(0, 0, 0, 0);
   yesterday.setDate(yesterday.getDate() - 1);
+
+  useEffect(() => {
+    geografiaService.getPaises().then(setPaises).catch((e) =>
+      setMessageDialog({ title: "Error", message: e.message }),
+    );
+  }, []);
+
+  const seleccionarPais = async (id: number) => {
+    setForm((f) => ({ ...f, id_pais: id, id_provincia: null, id_canton: null, id_distrito: null }));
+    setProvincias([]); setCantones([]); setDistritos([]);
+    try { setCargandoUbicacion(true); setProvincias(await geografiaService.getProvincias(id)); }
+    catch (e: any) { setMessageDialog({ title: "Error", message: e.message }); }
+    finally { setCargandoUbicacion(false); }
+  };
+
+  const seleccionarProvincia = async (id: number) => {
+    setForm((f) => ({ ...f, id_provincia: id, id_canton: null, id_distrito: null }));
+    setCantones([]); setDistritos([]);
+    try { setCargandoUbicacion(true); setCantones(await geografiaService.getCantones(id)); }
+    catch (e: any) { setMessageDialog({ title: "Error", message: e.message }); }
+    finally { setCargandoUbicacion(false); }
+  };
+
+  const seleccionarCanton = async (id: number) => {
+    setForm((f) => ({ ...f, id_canton: id, id_distrito: null }));
+    setDistritos([]);
+    try { setCargandoUbicacion(true); setDistritos(await geografiaService.getDistritos(id)); }
+    catch (e: any) { setMessageDialog({ title: "Error", message: e.message }); }
+    finally { setCargandoUbicacion(false); }
+  };
 
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
@@ -152,8 +191,7 @@ export default function NuevoClienteScreen() {
         fecha_nacimiento: form.fecha_nacimiento || null,
         correo: form.correo || null,
         telefono: form.telefono,
-        provincia: form.provincia || null,
-        canton: form.canton || null,
+        id_distrito: form.id_distrito,
         notas: form.notas || null,
       });
 
@@ -175,7 +213,7 @@ export default function NuevoClienteScreen() {
   };
 
   const inputProps = (key: string) => ({
-    value: form[key as keyof typeof form],
+    value: String(form[key as keyof typeof form] ?? ""),
     onChangeText: set(key),
     errorMessage: errores[key],
     inputStyle: styles.inputText,
@@ -276,11 +314,17 @@ export default function NuevoClienteScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>DIRECCIÓN</Text>
 
+            <Text style={styles.fieldLabel}>PAÍS</Text>
+            <SelectField value={form.id_pais} options={paises} placeholder="Seleccioná un país" onChange={seleccionarPais} />
+
             <Text style={styles.fieldLabel}>PROVINCIA</Text>
-            <Input placeholder="Ej. San José" {...inputProps("provincia")} />
+            <SelectField value={form.id_provincia} options={provincias} placeholder="Seleccioná una provincia" onChange={seleccionarProvincia} disabled={!form.id_pais} loading={cargandoUbicacion && !!form.id_pais && provincias.length === 0} />
 
             <Text style={styles.fieldLabel}>CANTÓN / CIUDAD</Text>
-            <Input placeholder="Ej. Escazú" {...inputProps("canton")} />
+            <SelectField value={form.id_canton} options={cantones} placeholder="Seleccioná un cantón" onChange={seleccionarCanton} disabled={!form.id_provincia} loading={cargandoUbicacion && !!form.id_provincia && cantones.length === 0} />
+
+            <Text style={styles.fieldLabel}>DISTRITO</Text>
+            <SelectField value={form.id_distrito} options={distritos} placeholder="Seleccioná un distrito" onChange={(districtId) => setForm((f) => ({ ...f, id_distrito: districtId }))} disabled={!form.id_canton} loading={cargandoUbicacion && !!form.id_canton && distritos.length === 0} />
           </View>
 
           <View style={styles.divider} />

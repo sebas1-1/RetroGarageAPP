@@ -10,12 +10,18 @@ export interface Cliente {
   fecha_nacimiento: string | null;
   correo: string | null;
   telefono: string;
+  id_pais: number | null;
+  id_provincia: number | null;
+  id_canton: number | null;
+  id_distrito: number | null;
   provincia: string | null;
   canton: string | null;
+  distrito: string | null;
+  pais: string | null;
   notas: string | null;
 }
 
-export type ClienteInput = Omit<Cliente, "id_cliente">;
+export type ClienteInput = Pick<Cliente, "nombre" | "apellido" | "identificacion" | "fecha_nacimiento" | "correo" | "telefono" | "id_distrito" | "notas">;
 
 // Convierte la respuesta HTTP en JSON y centraliza el manejo de errores.
 async function handle(res: Response) {

@@ -18,6 +18,7 @@ import { fs, sp } from "../../constants/responsive";
 import { AutoInput, autosService } from "../../services/autosService";
 import { clientesService } from "../../services/clientesService";
 import { geografiaService, OpcionGeografica } from "../../services/geografiaService";
+import { tseService } from "../../services/tseService";
 
 type AutoForm = {
   marca: string;
@@ -37,6 +38,7 @@ const nuevoAuto = (): AutoForm => ({
 export default function NuevoClienteScreen() {
   const router = useRouter();
   const [guardando, setGuardando] = useState(false);
+  const [consultandoTse, setConsultandoTse] = useState(false);
   const [form, setForm] = useState({
     nombre: "",
     apellido: "",
@@ -50,6 +52,7 @@ export default function NuevoClienteScreen() {
     id_distrito: null as number | null,
     notas: "",
   });
+  
   const [autos, setAutos] = useState<AutoForm[]>([]);
   const [paises, setPaises] = useState<OpcionGeografica[]>([]);
   const [provincias, setProvincias] = useState<OpcionGeografica[]>([]);
@@ -126,6 +129,52 @@ export default function NuevoClienteScreen() {
         placa: auto.placa.trim() || null,
       }))
       .filter((auto) => auto.marca || auto.modelo || auto.anio || auto.placa);
+
+
+
+  const buscarDatosPersona = async () => {
+  const identificacionLimpia = form.identificacion.replace(/\D/g, "");
+
+  if (identificacionLimpia.length < 8 || consultandoTse) {
+    return;
+  }
+
+  try {
+    setConsultandoTse(true);
+
+    const persona = await tseService.buscarPorIdentificacion(
+      form.identificacion,
+    );
+
+    if (persona === null) {
+      setMessageDialog({
+        title: "Información",
+        message:
+          "No se encontró la identificación. Puedes completar los datos manualmente.",
+      });
+      return;
+    }
+
+    setForm((formActual) => ({
+      ...formActual,
+      nombre: persona.nombre ?? "",
+      apellido: persona.apellido ?? "",
+      fecha_nacimiento: persona.fecha_nacimiento ?? "",
+    }));
+  } catch (error) {
+    const mensaje =
+      error instanceof Error
+        ? error.message
+        : "No fue posible consultar la identificación";
+
+    setMessageDialog({
+      title: "Error",
+      message: mensaje,
+    });
+  } finally {
+    setConsultandoTse(false);
+  }
+};
 
   // Valida datos personales y de contacto antes de crear el cliente.
   const validar = () => {
@@ -270,9 +319,16 @@ export default function NuevoClienteScreen() {
               IDENTIFICACIÓN <Text style={styles.req}>*</Text>
             </Text>
             <Input
-              placeholder="Ej. 1-1234-5678"
-              {...inputProps("identificacion")}
-            />
+                placeholder="Ej. 1-1234-5678"
+                keyboardType="numeric"
+                {...inputProps("identificacion")}
+                onBlur={buscarDatosPersona}
+                rightIcon={
+                  consultandoTse ? (
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                  ) : undefined
+                }
+              />
 
             <Text style={styles.fieldLabel}>FECHA DE NACIMIENTO</Text>
             <DatePickerField

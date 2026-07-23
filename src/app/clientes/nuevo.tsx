@@ -15,6 +15,10 @@ import { MessageDialog } from "../../components/shared/MessageDialog";
 import { SelectField } from "../../components/shared/SelectField";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
+import {
+  aseguradorasService,
+  PolizaSocio,
+} from "../../services/aseguradorasService";
 import { AutoInput, autosService } from "../../services/autosService";
 import { clientesService } from "../../services/clientesService";
 import { geografiaService, OpcionGeografica } from "../../services/geografiaService";
@@ -33,6 +37,9 @@ const nuevoAuto = (): AutoForm => ({
   anio: "",
   placa: "",
 });
+
+const normalizarPlaca = (placa: string) =>
+  placa.trim().replace(/[-\s]/g, "").toUpperCase();
 
 // Pantalla para registrar un cliente nuevo.
 export default function NuevoClienteScreen() {
@@ -54,6 +61,12 @@ export default function NuevoClienteScreen() {
   });
   
   const [autos, setAutos] = useState<AutoForm[]>([]);
+  const [polizasPorPlaca, setPolizasPorPlaca] = useState<
+    Record<string, PolizaSocio | null | undefined>
+  >({});
+  const [placasConsultando, setPlacasConsultando] = useState<
+    Record<string, boolean>
+  >({});
   const [paises, setPaises] = useState<OpcionGeografica[]>([]);
   const [provincias, setProvincias] = useState<OpcionGeografica[]>([]);
   const [cantones, setCantones] = useState<OpcionGeografica[]>([]);
@@ -118,6 +131,45 @@ export default function NuevoClienteScreen() {
 
   const quitarAuto = (index: number) =>
     setAutos((actuales) => actuales.filter((_, i) => i !== index));
+
+  // Consulta la aseguradora asociada sin incluir la poliza al guardar el auto.
+  const buscarPolizaAuto = async (placa: string) => {
+    const placaLimpia = normalizarPlaca(placa);
+
+    if (!placaLimpia) {
+      setMessageDialog({
+        title: "Placa requerida",
+        message: "Ingresa la placa antes de consultar la aseguradora.",
+      });
+      return;
+    }
+
+    try {
+      setPlacasConsultando((actuales) => ({
+        ...actuales,
+        [placaLimpia]: true,
+      }));
+
+      const poliza = await aseguradorasService.buscarPorPlaca(placaLimpia);
+      setPolizasPorPlaca((actuales) => ({
+        ...actuales,
+        [placaLimpia]: poliza,
+      }));
+    } catch (error) {
+      setMessageDialog({
+        title: "Error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "No fue posible consultar la aseguradora",
+      });
+    } finally {
+      setPlacasConsultando((actuales) => ({
+        ...actuales,
+        [placaLimpia]: false,
+      }));
+    }
+  };
 
   const autosParaGuardar = (): AutoInput[] =>
     autos
@@ -399,7 +451,13 @@ export default function NuevoClienteScreen() {
               <Text style={styles.emptyText}>Sin autos agregados</Text>
             ) : null}
 
-            {autos.map((auto, index) => (
+            {autos.map((auto, index) => {
+              const placaLimpia = normalizarPlaca(auto.placa);
+              const poliza = polizasPorPlaca[placaLimpia];
+              const consultandoPoliza =
+                placasConsultando[placaLimpia] ?? false;
+
+              return (
               <View key={index} style={styles.autoBox}>
                 <View style={styles.autoHeader}>
                   <Text style={styles.autoTitle}>Auto {index + 1}</Text>
@@ -463,14 +521,105 @@ export default function NuevoClienteScreen() {
                       value={auto.placa}
                       onChangeText={setAuto(index, "placa")}
                       autoCapitalize="characters"
+                      onSubmitEditing={() => buscarPolizaAuto(auto.placa)}
+                      returnKeyType="search"
                       inputStyle={styles.inputText}
                       inputContainerStyle={styles.inputContainer}
                       containerStyle={styles.inputWrapper}
+                      rightIcon={
+                        consultandoPoliza ? (
+                          <ActivityIndicator
+                            size="small"
+                            color={Colors.primary}
+                          />
+                        ) : (
+                          <TouchableOpacity
+                            style={styles.policySearchButton}
+                            onPress={() => buscarPolizaAuto(auto.placa)}
+                            accessibilityRole="button"
+                            accessibilityLabel="Consultar póliza por placa"
+                          >
+                            <MaterialIcons
+                              name="verified-user"
+                              size={15}
+                              color={Colors.cream}
+                            />
+                            <Text style={styles.policySearchButtonText}>
+                              CONSULTAR
+                            </Text>
+                          </TouchableOpacity>
+                        )
+                      }
                     />
                   </View>
                 </View>
+
+                {poliza !== undefined ? (
+                  poliza ? (
+                    <View
+                      style={[
+                        styles.policyCard,
+                        poliza.vigente
+                          ? styles.policyCardValid
+                          : styles.policyCardInvalid,
+                      ]}
+                    >
+                      <View style={styles.policyHeader}>
+                        <View style={styles.policyTitleRow}>
+                          <MaterialIcons
+                            name={
+                              poliza.vigente
+                                ? "verified-user"
+                                : "gpp-bad"
+                            }
+                            size={20}
+                            color={poliza.vigente ? "#0F6E56" : "#993C1D"}
+                          />
+                          <Text style={styles.policyCompany}>
+                            {poliza.aseguradora}
+                          </Text>
+                        </View>
+                        <Text
+                          style={[
+                            styles.policyStatus,
+                            poliza.vigente
+                              ? styles.policyStatusValid
+                              : styles.policyStatusInvalid,
+                          ]}
+                        >
+                          {poliza.vigente ? "VIGENTE" : "NO VIGENTE"}
+                        </Text>
+                      </View>
+                      <Text style={styles.policyDetail}>
+                        Póliza: {poliza.numero_poliza}
+                      </Text>
+                      <Text style={styles.policyDetail}>
+                        Cobertura: {poliza.tipo_cobertura}
+                      </Text>
+                      <Text style={styles.policyDetail}>
+                        Deducible: ₡
+                        {poliza.deducible.toLocaleString("es-CR")}
+                      </Text>
+                      <Text style={styles.policyDates}>
+                        {poliza.fecha_inicio} al {poliza.fecha_vencimiento}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.policyNotFound}>
+                      <MaterialIcons
+                        name="info-outline"
+                        size={18}
+                        color={Colors.gray}
+                      />
+                      <Text style={styles.policyNotFoundText}>
+                        No se encontró una póliza para esta placa.
+                      </Text>
+                    </View>
+                  )
+                ) : null}
               </View>
-            ))}
+              );
+            })}
           </View>
 
           <View style={styles.divider} />
@@ -646,6 +795,93 @@ const styles = StyleSheet.create({
   },
   inputText: { fontSize: fs(14), color: Colors.primary },
   inputWrapper: { paddingHorizontal: 0, marginBottom: sp(8) },
+  policySearchButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: sp(3),
+    backgroundColor: Colors.primary,
+    borderRadius: sp(5),
+    paddingHorizontal: sp(7),
+    paddingVertical: sp(6),
+  },
+  policySearchButtonText: {
+    color: Colors.cream,
+    fontSize: fs(9),
+    fontWeight: "700",
+  },
+  policyCard: {
+    borderWidth: 1,
+    borderRadius: sp(8),
+    padding: sp(12),
+    marginTop: sp(4),
+  },
+  policyCardValid: {
+    backgroundColor: "#E8F5E9",
+    borderColor: "#0F6E56",
+  },
+  policyCardInvalid: {
+    backgroundColor: "#FFF3E0",
+    borderColor: "#993C1D",
+  },
+  policyHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: sp(8),
+    marginBottom: sp(8),
+  },
+  policyTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: sp(6),
+    flex: 1,
+  },
+  policyCompany: {
+    color: Colors.primary,
+    fontSize: fs(13),
+    fontWeight: "700",
+  },
+  policyStatus: {
+    borderRadius: sp(4),
+    paddingHorizontal: sp(7),
+    paddingVertical: sp(3),
+    fontSize: fs(9),
+    fontWeight: "700",
+  },
+  policyStatusValid: {
+    color: "#0F6E56",
+    backgroundColor: "#C8E6C9",
+  },
+  policyStatusInvalid: {
+    color: "#993C1D",
+    backgroundColor: "#FFCCBC",
+  },
+  policyDetail: {
+    color: Colors.primary,
+    fontSize: fs(11),
+    marginTop: sp(3),
+  },
+  policyDates: {
+    color: Colors.gray,
+    fontSize: fs(10),
+    marginTop: sp(6),
+  },
+  policyNotFound: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: sp(6),
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: sp(8),
+    backgroundColor: "#F4F4F4",
+    padding: sp(10),
+    marginTop: sp(4),
+  },
+  policyNotFoundText: {
+    color: Colors.gray,
+    fontSize: fs(11),
+    flex: 1,
+  },
   buttons: {
     flexDirection: "row",
     justifyContent: "center",

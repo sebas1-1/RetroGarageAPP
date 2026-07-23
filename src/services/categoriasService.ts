@@ -5,7 +5,7 @@ const BASE_URL = "http://localhost:3001/api";
 export interface Categoria {
   id_categoria: number;
   nombre: string;
-  tipo: "Producto" | "Servicio";
+  tipo: "PRODUCTO" | "SERVICIO";
   descripcion: string | null;
   activo: boolean;
 }

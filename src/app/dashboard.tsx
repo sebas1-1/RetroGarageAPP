@@ -55,6 +55,18 @@ const ACCESOS = [
     sub: "Administrar categorías",
     ruta: "/categorias",
   },
+  {
+    icon: "local-shipping",
+    label: "Asistencia vial",
+    sub: "Consultar grúas",
+    ruta: "/asistencia",
+  },
+  {
+    icon: "car-rental",
+    label: "Vehículo sustituto",
+    sub: "Consultar alquileres",
+    ruta: "/vehiculos-alquiler",
+  },
 ];
 
 const BASE_URL = "http://localhost:3001/api";

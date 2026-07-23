@@ -19,14 +19,48 @@ import {
   ProductoInput,
   inventarioService,
 } from "../../services/inventarioService";
+import {
+  OfertaRepuesto,
+  proveedoresService,
+} from "../../services/proveedoresService";
 
 // Unidades que puede manejar un producto de inventario.
 const UNIDADES = ["Unidades", "Litros", "Metros"];
+
+type RepuestoEncontrado = {
+  mejorOferta: OfertaRepuesto;
+  cantidadOfertas: number;
+};
+
+const agruparOfertasPorRepuesto = (
+  ofertas: OfertaRepuesto[],
+): RepuestoEncontrado[] => {
+  const agrupadas = new Map<string, RepuestoEncontrado>();
+
+  ofertas.forEach((oferta) => {
+    const actual = agrupadas.get(oferta.codigo);
+
+    agrupadas.set(oferta.codigo, {
+      mejorOferta:
+        !actual || oferta.precio < actual.mejorOferta.precio
+          ? oferta
+          : actual.mejorOferta,
+      cantidadOfertas: (actual?.cantidadOfertas ?? 0) + 1,
+    });
+  });
+
+  return Array.from(agrupadas.values());
+};
 
 // Pantalla para agregar un producto o repuesto al inventario.
 export default function NuevoProductoScreen() {
   const router = useRouter();
   const [guardando, setGuardando] = useState(false);
+  const [consultandoProveedor, setConsultandoProveedor] = useState(false);
+  const [busquedaProveedor, setBusquedaProveedor] = useState("");
+  const [ofertasProveedor, setOfertasProveedor] = useState<OfertaRepuesto[]>(
+    [],
+  );
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [form, setForm] = useState({
     nombre: "",
@@ -61,7 +95,7 @@ export default function NuevoProductoScreen() {
   const cargarCategorias = async () => {
     try {
       const data: Categoria[] = await categoriasService.getAll();
-      setCategorias(data.filter((c) => c.tipo === "Producto" && c.activo));
+      setCategorias(data.filter((c) => c.tipo === "PRODUCTO" && c.activo));
     } catch (e: any) {
       setMessageDialog({ title: "Error", message: e.message });
     }
@@ -69,6 +103,82 @@ export default function NuevoProductoScreen() {
 
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
+
+  const repuestosEncontrados = agruparOfertasPorRepuesto(ofertasProveedor);
+
+  const cambiarBusquedaProveedor = (valor: string) => {
+    setBusquedaProveedor(valor);
+    setOfertasProveedor([]);
+    setForm((formActual) => ({
+      ...formActual,
+      codigo_item: "",
+    }));
+  };
+
+  // Busca coincidencias externas por nombre, marca o codigo.
+  const buscarRepuestoProveedor = async () => {
+    const termino = busquedaProveedor.trim();
+
+    if (!termino || consultandoProveedor) return;
+
+    try {
+      setConsultandoProveedor(true);
+      const ofertas = await proveedoresService.buscar(termino);
+      setOfertasProveedor(ofertas);
+
+      if (ofertas.length === 0) {
+        setMessageDialog({
+          title: "Sin resultados",
+          message:
+            "No se encontraron repuestos por nombre, código o marca.",
+        });
+      }
+    } catch (error) {
+      setOfertasProveedor([]);
+      setMessageDialog({
+        title: "Error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "No fue posible consultar los proveedores",
+      });
+    } finally {
+      setConsultandoProveedor(false);
+    }
+  };
+
+  // Precarga el producto elegido usando la oferta de menor precio.
+  const seleccionarRepuestoProveedor = ({
+    mejorOferta,
+    cantidadOfertas,
+  }: RepuestoEncontrado) => {
+    setForm((formActual) => ({
+      ...formActual,
+      codigo_item: mejorOferta.codigo,
+      nombre: mejorOferta.nombre,
+      precio_costo: String(mejorOferta.precio),
+      proveedor: mejorOferta.proveedor,
+    }));
+    setBusquedaProveedor(mejorOferta.codigo);
+    setOfertasProveedor([]);
+    setErrores((erroresActuales) => {
+      const nuevosErrores = { ...erroresActuales };
+      delete nuevosErrores.codigo_item;
+      delete nuevosErrores.nombre;
+      delete nuevosErrores.precio_costo;
+      return nuevosErrores;
+    });
+
+    setMessageDialog({
+      title: "Mejor oferta seleccionada",
+      message:
+        `${mejorOferta.proveedor}\n` +
+        `₡${mejorOferta.precio.toLocaleString("es-CR")} · ` +
+        `${mejorOferta.existencia} disponibles · ` +
+        `entrega en ${mejorOferta.tiempo_entrega_dias} día(s).\n\n` +
+        `Se compararon ${cantidadOfertas} oferta(s) para este repuesto.`,
+    });
+  };
 
   // Valida nombre, categoria, precios y stock antes de guardar.
   const validar = () => {
@@ -191,12 +301,53 @@ export default function NuevoProductoScreen() {
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.fieldLabel}>
-                  CÓDIGO INTERNO <Text style={styles.req}>*</Text>
+                  BUSCAR REPUESTO <Text style={styles.req}>*</Text>
                 </Text>
                 <Input
-                  placeholder="Ej: REP-001"
-                  {...inputProps("codigo_item")}
+                  placeholder="Nombre, código o marca"
+                  value={busquedaProveedor}
+                  onChangeText={cambiarBusquedaProveedor}
+                  errorMessage={errores.codigo_item}
+                  inputStyle={styles.inputText}
+                  inputContainerStyle={
+                    errores.codigo_item
+                      ? styles.inputContainerError
+                      : styles.inputContainer
+                  }
+                  containerStyle={styles.inputWrapper}
+                  onSubmitEditing={buscarRepuestoProveedor}
+                  returnKeyType="search"
+                  rightIcon={
+                    consultandoProveedor ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={Colors.primary}
+                      />
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.searchButton}
+                        onPress={buscarRepuestoProveedor}
+                        accessibilityRole="button"
+                        accessibilityLabel="Buscar repuesto en proveedores"
+                      >
+                        <MaterialIcons
+                          name="search"
+                          size={16}
+                          color={Colors.cream}
+                        />
+                        <Text style={styles.searchButtonText}>BUSCAR</Text>
+                      </TouchableOpacity>
+                    )
+                  }
                 />
+                <Text style={styles.searchHint}>
+                  Busca y selecciona un repuesto para asignar su código.
+                </Text>
+                {form.codigo_item ? (
+                  <Text style={styles.selectedCode}>
+                    Código seleccionado: {form.codigo_item}
+                  </Text>
+                ) : null}
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.fieldLabel}>
@@ -246,6 +397,48 @@ export default function NuevoProductoScreen() {
                 )}
               </View>
             </View>
+
+            {repuestosEncontrados.length > 0 ? (
+              <View style={styles.searchResults}>
+                <Text style={styles.searchResultsTitle}>
+                  SELECCIONA UN REPUESTO
+                </Text>
+                {repuestosEncontrados.map((resultado) => {
+                  const { mejorOferta, cantidadOfertas } = resultado;
+
+                  return (
+                    <TouchableOpacity
+                      key={mejorOferta.codigo}
+                      style={styles.searchResultCard}
+                      onPress={() =>
+                        seleccionarRepuestoProveedor(resultado)
+                      }
+                    >
+                      <View style={styles.searchResultInfo}>
+                        <Text style={styles.searchResultName}>
+                          {mejorOferta.nombre}
+                        </Text>
+                        <Text style={styles.searchResultDetail}>
+                          {mejorOferta.codigo}
+                          {mejorOferta.marca
+                            ? ` · ${mejorOferta.marca}`
+                            : ""}
+                        </Text>
+                      </View>
+                      <View style={styles.searchResultPrice}>
+                        <Text style={styles.searchResultPriceText}>
+                          Desde ₡
+                          {mejorOferta.precio.toLocaleString("es-CR")}
+                        </Text>
+                        <Text style={styles.searchResultOffers}>
+                          {cantidadOfertas} oferta(s)
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ) : null}
           </View>
 
           <View style={styles.divider} />
@@ -538,6 +731,81 @@ const styles = StyleSheet.create({
   },
   inputText: { fontSize: fs(14), color: Colors.primary },
   inputWrapper: { paddingHorizontal: 0, marginBottom: sp(8) },
+  searchButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: sp(4),
+    backgroundColor: Colors.primary,
+    borderRadius: sp(5),
+    paddingHorizontal: sp(8),
+    paddingVertical: sp(6),
+  },
+  searchButtonText: {
+    color: Colors.cream,
+    fontSize: fs(10),
+    fontWeight: "700",
+  },
+  searchHint: {
+    color: Colors.gray,
+    fontSize: fs(11),
+    marginTop: sp(-8),
+    marginBottom: sp(8),
+    marginLeft: sp(2),
+  },
+  selectedCode: {
+    color: "#0F6E56",
+    fontSize: fs(11),
+    fontWeight: "600",
+    marginBottom: sp(8),
+    marginLeft: sp(2),
+  },
+  searchResults: {
+    gap: sp(8),
+    marginTop: sp(12),
+  },
+  searchResultsTitle: {
+    color: Colors.gray,
+    fontSize: fs(10),
+    fontWeight: "600",
+    letterSpacing: 1,
+  },
+  searchResultCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: sp(12),
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: sp(8),
+    padding: sp(12),
+  },
+  searchResultInfo: {
+    flex: 1,
+  },
+  searchResultName: {
+    color: Colors.primary,
+    fontSize: fs(13),
+    fontWeight: "600",
+  },
+  searchResultDetail: {
+    color: Colors.gray,
+    fontSize: fs(11),
+    marginTop: sp(3),
+  },
+  searchResultPrice: {
+    alignItems: "flex-end",
+  },
+  searchResultPriceText: {
+    color: "#0F6E56",
+    fontSize: fs(12),
+    fontWeight: "700",
+  },
+  searchResultOffers: {
+    color: Colors.gray,
+    fontSize: fs(10),
+    marginTop: sp(3),
+  },
   buttons: {
     flexDirection: "row",
     justifyContent: "center",

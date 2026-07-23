@@ -16,7 +16,7 @@ import { fs, sp } from "../../constants/responsive";
 import { Categoria, categoriasService } from "../../services/categoriasService";
 
 // Tipos permitidos para clasificar una categoria.
-const TIPOS = ["Producto", "Servicio"] as const;
+const TIPOS = ["PRODUCTO", "SERVICIO"] as const;
 
 // Pantalla para administrar categorias de productos y servicios.
 export default function CategoriasScreen() {
@@ -69,7 +69,7 @@ export default function CategoriasScreen() {
       setGuardando(true);
       await categoriasService.crear({
         nombre: form.nombre.trim(),
-        tipo: form.tipo as "Producto" | "Servicio",
+        tipo: form.tipo as "PRODUCTO" | "SERVICIO",
         descripcion: form.descripcion.trim() || null,
       });
       setForm({ nombre: "", tipo: "", descripcion: "" });
@@ -168,7 +168,7 @@ export default function CategoriasScreen() {
                       form.tipo === t && styles.tipoBtnTextActive,
                     ]}
                   >
-                    {t}
+                    {t === "PRODUCTO" ? "Producto" : "Servicio"}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -227,7 +227,7 @@ export default function CategoriasScreen() {
               <View key={cat.id_categoria} style={styles.catCard}>
                 <View style={styles.catIconBox}>
                   <MaterialIcons
-                    name={cat.tipo === "Producto" ? "inventory-2" : "build"}
+                    name={cat.tipo === "PRODUCTO" ? "inventory-2" : "build"}
                     size={20}
                     color={Colors.gray}
                   />

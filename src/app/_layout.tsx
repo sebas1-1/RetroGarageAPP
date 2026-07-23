@@ -146,6 +146,22 @@ export default function Layout() {
           headerShown: false,
         }}
       />
+      {/* Asistencia se abre desde el dashboard y no ocupa otra pestaña. */}
+      <Tabs.Screen
+        name="asistencia"
+        options={{
+          href: null,
+          headerShown: false,
+        }}
+      />
+      {/* Alquileres se consulta desde el dashboard sin crear otra pestaña. */}
+      <Tabs.Screen
+        name="vehiculos-alquiler"
+        options={{
+          href: null,
+          headerShown: false,
+        }}
+      />
     </Tabs>
   );
 }

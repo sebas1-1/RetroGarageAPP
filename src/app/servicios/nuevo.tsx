@@ -51,7 +51,7 @@ export default function NuevoServicioScreen() {
     try {
       setCargando(true);
       const data: Categoria[] = await categoriasService.getAll();
-      setCategorias(data.filter((categoria) => categoria.tipo === "Servicio"));
+      setCategorias(data.filter((categoria) => categoria.tipo === "SERVICIO"));
     } catch (e: any) {
       setMessageDialog({ title: "Error", message: e.message });
     } finally {

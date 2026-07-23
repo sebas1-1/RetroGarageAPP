@@ -68,7 +68,7 @@ export default function EditarProductoScreen() {
         categoriasService.getAll(),
       ]);
       setCategorias(
-        (cats as Categoria[]).filter((c) => c.tipo === "Producto" && c.activo),
+        (cats as Categoria[]).filter((c) => c.tipo === "PRODUCTO" && c.activo),
       );
       setForm({
         nombre: producto.nombre,

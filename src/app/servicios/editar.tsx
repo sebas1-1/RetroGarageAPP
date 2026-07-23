@@ -56,7 +56,7 @@ export default function EditarServicioScreen() {
         serviciosService.getById(Number(id)),
         categoriasService.getAll() as Promise<Categoria[]>,
       ]);
-      setCategorias(cats.filter((categoria) => categoria.tipo === "Servicio"));
+      setCategorias(cats.filter((categoria) => categoria.tipo === "SERVICIO"));
       setForm({
         id_categoria: String(servicio.id_categoria),
         nombre: servicio.nombre ?? "",

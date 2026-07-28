@@ -90,6 +90,7 @@ export interface Cita {
 // Pagos: metodos, facturas y cobros.
 export interface MetodoPago {
   id_metodo: number;
+  codigo: "TARJETA" | "SINPE";
   nombre: string;
   requiere_referencia: boolean;
   activo: boolean;
@@ -98,7 +99,7 @@ export interface MetodoPago {
 export interface Pago {
   id_pago: number;
   numero_factura: string;
-  id_cita: number;
+  id_cita: number | null;
   id_usuario: number;
   id_metodo: number;
   monto: number;
@@ -109,6 +110,11 @@ export interface Pago {
   observaciones: string;
   estado_pago: string;
   fecha_pago: string;
+  id_transaccion?: number;
+  estado_pasarela?: "APROBADA" | "RECHAZADA";
+  marca_tarjeta?: "VISA" | "MASTERCARD" | null;
+  ultimos_cuatro?: string | null;
+  telefono_sinpe?: string | null;
 }
 
 // ── INVENTARIO MOVIMIENTOS ─────────────────────

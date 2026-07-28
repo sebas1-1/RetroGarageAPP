@@ -18,13 +18,23 @@ import { pagosService } from "../../services/pagosService";
 interface Pago {
   id_pago: number;
   numero_factura: string;
-  fecha: string;
+  fecha_pago: string;
+  id_cita: number | null;
   monto: number;
   metodo_pago: string;
   cliente: string | null;
   servicio: string | null;
-  tipo: "cita" | "directo";
 }
+
+const formatearFecha = (value: string) => {
+  const fecha = new Date(value);
+  if (Number.isNaN(fecha.getTime())) return "Fecha no disponible";
+  return fecha.toLocaleDateString("es-CR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
 
 // Pantalla de pagos: muestra el historial de cobros registrados.
 export default function PagosScreen() {
@@ -36,15 +46,8 @@ export default function PagosScreen() {
     message: string;
   } | null>(null);
 
-  // Recarga pagos cada vez que se vuelve a esta pantalla.
-  useFocusEffect(
-    useCallback(() => {
-      cargarPagos();
-    }, []),
-  );
-
   // Consulta todos los pagos y controla errores de carga.
-  const cargarPagos = async () => {
+  const cargarPagos = useCallback(async () => {
     try {
       setCargando(true);
       const data = await pagosService.getAll();
@@ -54,12 +57,18 @@ export default function PagosScreen() {
     } finally {
       setCargando(false);
     }
-  };
+  }, []);
+
+  // Recarga pagos cada vez que se vuelve a esta pantalla.
+  useFocusEffect(
+    useCallback(() => {
+      void cargarPagos();
+    }, [cargarPagos]),
+  );
 
   const iconoMetodo = (metodo: string) => {
-    if (metodo === "Efectivo") return "attach-money";
     if (metodo === "Tarjeta") return "credit-card";
-    return "account-balance";
+    return "phone-android";
   };
 
   if (cargando) {
@@ -140,7 +149,7 @@ export default function PagosScreen() {
                   <View
                     style={[
                       styles.tipoBadge,
-                      item.tipo === "cita"
+                      item.id_cita !== null
                         ? styles.tipoCita
                         : styles.tipoDirecto,
                     ]}
@@ -148,20 +157,16 @@ export default function PagosScreen() {
                     <Text
                       style={[
                         styles.tipoBadgeText,
-                        item.tipo === "cita"
+                        item.id_cita !== null
                           ? styles.tipoCitaText
                           : styles.tipoDirectoText,
                       ]}
                     >
-                      {item.tipo === "cita" ? "Cita" : "Directo"}
+                      {item.id_cita !== null ? "Cita" : "Directo"}
                     </Text>
                   </View>
                   <Text style={styles.fecha}>
-                    {new Date(item.fecha).toLocaleDateString("es-CR", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
+                    {formatearFecha(item.fecha_pago)}
                   </Text>
                 </View>
               </View>

@@ -1,5 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Input, Text } from "@rneui/themed";
+import * as WebBrowser from "expo-web-browser";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -15,6 +16,7 @@ import { MessageDialog } from "../../components/shared/MessageDialog";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Cita, citasService } from "../../services/citasService";
+import { getCurrentUserId } from "../../services/authSession";
 import { inventarioService, Producto } from "../../services/inventarioService";
 import {
   ItemCarrito,
@@ -23,16 +25,35 @@ import {
 } from "../../services/pagosService";
 import { Servicio, serviciosService } from "../../services/serviciosService";
 
-// Bancos disponibles cuando el metodo de pago necesita referencia.
-const BANCOS = [
-  "BCR",
-  "BNCR",
-  "BAC",
-  "Scotiabank",
-  "Davivienda",
-  "Popular",
-  "Promerica",
-];
+type MarcaTarjeta = "VISA" | "MASTERCARD" | null;
+
+const soloDigitos = (value: string, max: number) =>
+  value.replace(/\D/g, "").slice(0, max);
+
+const formatearTarjeta = (value: string) =>
+  soloDigitos(value, 16).replace(/(\d{4})(?=\d)/g, "$1 ");
+
+const formatearVencimiento = (value: string) => {
+  const digits = soloDigitos(value, 4);
+  return digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+};
+
+const detectarMarca = (value: string): MarcaTarjeta => {
+  const numero = soloDigitos(value, 16);
+  if (numero.startsWith("4")) return "VISA";
+  if (numero.startsWith("5") || numero.startsWith("2")) return "MASTERCARD";
+  return null;
+};
+
+const vencimientoValido = (value: string) => {
+  const match = value.match(/^(0[1-9]|1[0-2])\/(\d{2})$/);
+  if (!match) return false;
+  const now = new Date();
+  const month = Number(match[1]);
+  const year = 2000 + Number(match[2]);
+  return year > now.getFullYear() ||
+    (year === now.getFullYear() && month >= now.getMonth() + 1);
+};
 
 // Pasos del flujo para que el pago se registre de forma ordenada.
 const PASO_TIPO = 1;
@@ -57,16 +78,16 @@ export default function NuevoPagoScreen() {
   // Datos para buscar productos y armar el carrito del pago.
   const [buscarProducto, setBuscarProducto] = useState("");
   const [productos, setProductos] = useState<Producto[]>([]);
-  const [buscandoProductos, setBuscandoProductos] = useState(false);
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
 
   // Datos finales del metodo de pago y comprobante.
   const [metodos, setMetodos] = useState<MetodoPago[]>([]);
   const [metodoSeleccionado, setMetodoSeleccionado] =
     useState<MetodoPago | null>(null);
-  const [montoRecibido, setMontoRecibido] = useState("");
-  const [referencia, setReferencia] = useState("");
-  const [banco, setBanco] = useState("");
+  const [numeroTarjeta, setNumeroTarjeta] = useState("");
+  const [fechaVencimiento, setFechaVencimiento] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [telefonoSinpe, setTelefonoSinpe] = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [guardando, setGuardando] = useState(false);
 
@@ -96,10 +117,7 @@ export default function NuevoPagoScreen() {
 
   // Busca citas con una pequena espera para no llamar la API en cada tecla.
   useEffect(() => {
-    if (!buscarCita.trim()) {
-      setCitas([]);
-      return;
-    }
+    if (!buscarCita.trim()) return;
     clearTimeout(searchTimeout.current);
     searchTimeout.current = setTimeout(async () => {
       try {
@@ -112,7 +130,13 @@ export default function NuevoPagoScreen() {
         setBuscandoCitas(false);
       }
     }, 400);
+    return () => clearTimeout(searchTimeout.current);
   }, [buscarCita]);
+
+  const cambiarBusquedaCita = (value: string) => {
+    setBuscarCita(value);
+    if (!value.trim()) setCitas([]);
+  };
 
   // Filtra productos localmente por nombre o codigo.
   const productosFiltrados = productos.filter(
@@ -123,6 +147,16 @@ export default function NuevoPagoScreen() {
 
   // Agrega un producto al carrito o aumenta su cantidad si ya existe.
   const agregarAlCarrito = (producto: Producto) => {
+    const cantidadActual =
+      carrito.find((item) => item.id_producto === producto.id_producto)?.cantidad ?? 0;
+    if (producto.stock_actual <= 0 || cantidadActual >= producto.stock_actual) {
+      setMessageDialog({
+        title: "Stock disponible alcanzado",
+        message: `Solo hay ${producto.stock_actual} unidad(es) disponibles de ${producto.nombre}.`,
+      });
+      return;
+    }
+
     setCarrito((prev) => {
       const existe = prev.find((i) => i.id_producto === producto.id_producto);
       if (existe) {
@@ -139,6 +173,7 @@ export default function NuevoPagoScreen() {
           nombre: producto.nombre,
           precio_unitario: producto.precio_venta,
           cantidad: 1,
+          stock_disponible: producto.stock_actual,
           unidad_medida: producto.unidad_medida,
         },
       ];
@@ -147,6 +182,19 @@ export default function NuevoPagoScreen() {
 
   // Suma o resta unidades; si llega a cero se quita del carrito.
   const cambiarCantidad = (id: number, delta: number) => {
+    const itemActual = carrito.find((item) => item.id_producto === id);
+    if (
+      itemActual &&
+      delta > 0 &&
+      itemActual.cantidad >= itemActual.stock_disponible
+    ) {
+      setMessageDialog({
+        title: "Stock disponible alcanzado",
+        message: `Solo hay ${itemActual.stock_disponible} unidad(es) disponibles de ${itemActual.nombre}.`,
+      });
+      return;
+    }
+
     setCarrito((prev) =>
       prev
         .map((i) =>
@@ -179,52 +227,88 @@ export default function NuevoPagoScreen() {
   // Total final a cobrar.
   const montoTotal = montoServicio + montoProductos;
 
-  // Cambio solo aplica cuando el metodo seleccionado es efectivo.
-  const cambio =
-    metodoSeleccionado?.nombre === "Efectivo" && montoRecibido
-      ? Number(montoRecibido) - montoTotal
-      : null;
+  const marcaTarjeta = detectarMarca(numeroTarjeta);
+  const numeroTarjetaValido = soloDigitos(numeroTarjeta, 16).length === 16;
+  const tarjetaValida =
+    numeroTarjetaValido &&
+    marcaTarjeta !== null &&
+    vencimientoValido(fechaVencimiento) &&
+    /^\d{3}$/.test(cvv);
+  const sinpeValido = /^\d{8}$/.test(telefonoSinpe);
+
+  const seleccionarMetodo = (metodo: MetodoPago) => {
+    setMetodoSeleccionado(metodo);
+  };
 
   // Reglas simples para habilitar avance entre pasos y confirmacion.
   const puedeAvanzarPaso1 = tipo !== null;
+  const carritoDentroDelStock = carrito.every(
+    (item) =>
+      item.cantidad > 0 && item.cantidad <= item.stock_disponible,
+  );
 
   const puedeAvanzarPaso2 =
-    tipo === "cita" ? citaSeleccionada !== null : carrito.length > 0;
+    tipo === "cita"
+      ? citaSeleccionada !== null && carritoDentroDelStock
+      : carrito.length > 0 && carritoDentroDelStock;
 
   const puedeConfirmar =
     metodoSeleccionado !== null &&
     montoTotal > 0 &&
-    (metodoSeleccionado.nombre !== "Efectivo" ||
-      (!!montoRecibido && Number(montoRecibido) >= montoTotal)) &&
-    (metodoSeleccionado.nombre !== "Transferencia" || !!referencia);
+    (metodoSeleccionado.codigo === "TARJETA"
+      ? tarjetaValida
+      : metodoSeleccionado.codigo === "SINPE"
+        ? sinpeValido
+        : true);
 
   // Envia el pago completo al backend y muestra el numero de factura.
   const confirmarPago = async () => {
     if (!puedeConfirmar) return;
     try {
       setGuardando(true);
-      const result = await pagosService.registrar({
+      const compra = {
         id_cita: citaSeleccionada?.id_cita ?? null,
-        id_usuario: 1,
+        id_usuario: getCurrentUserId() ?? 1,
         id_metodo: metodoSeleccionado!.id_metodo,
         monto: montoTotal,
-        monto_recibido:
-          metodoSeleccionado!.nombre === "Efectivo"
-            ? Number(montoRecibido)
-            : null,
-        cambio: cambio,
-        numero_referencia: referencia || null,
-        banco: banco || null,
         observaciones: observaciones || null,
         productos: carrito.map((i) => ({
           id_producto: i.id_producto,
           cantidad: i.cantidad,
           precio_unitario: i.precio_unitario,
         })),
+      };
+
+      if (metodoSeleccionado!.codigo === "PAYPAL") {
+        const order = await pagosService.crearOrdenPayPal(compra);
+        if (Platform.OS === "web" && typeof window !== "undefined") {
+          window.location.assign(order.url_aprobacion);
+          return;
+        }
+        await WebBrowser.openBrowserAsync(order.url_aprobacion);
+        return;
+      }
+
+      const esTarjeta = metodoSeleccionado!.codigo === "TARJETA";
+      const result = await pagosService.registrar({
+        ...compra,
+        datos_pasarela: esTarjeta
+          ? {
+              tipo: "TARJETA",
+              numero_tarjeta: soloDigitos(numeroTarjeta, 16),
+              fecha_vencimiento: fechaVencimiento,
+              cvv,
+            }
+          : {
+              tipo: "SINPE",
+              telefono: telefonoSinpe,
+            },
       });
       setMessageDialog({
         title: "Pago registrado",
-        message: `Factura ${result.numero_factura} generada correctamente.`,
+        message:
+          `Factura ${result.numero_factura} generada correctamente.\n` +
+          `Autorización: ${result.codigo_autorizacion}`,
         onClose: () => router.back(),
       });
     } catch (e: any) {
@@ -402,7 +486,7 @@ export default function NuevoPagoScreen() {
                   <Input
                     placeholder="Buscar por cliente o vehículo..."
                     value={buscarCita}
-                    onChangeText={setBuscarCita}
+                    onChangeText={cambiarBusquedaCita}
                     leftIcon={
                       <MaterialIcons
                         name="search"
@@ -532,7 +616,11 @@ export default function NuevoPagoScreen() {
                     {productosFiltrados.slice(0, 5).map((p) => (
                       <TouchableOpacity
                         key={p.id_producto}
-                        style={styles.productoItem}
+                        style={[
+                          styles.productoItem,
+                          p.stock_actual <= 0 && styles.productoItemDisabled,
+                        ]}
+                        disabled={p.stock_actual <= 0}
                         onPress={() => {
                           agregarAlCarrito(p);
                           setBuscarProducto("");
@@ -543,7 +631,10 @@ export default function NuevoPagoScreen() {
                             {p.nombre}
                           </Text>
                           <Text style={styles.productoItemSub}>
-                            {p.codigo_item} · Stock: {p.stock_actual}
+                            {p.codigo_item} ·{" "}
+                            {p.stock_actual > 0
+                              ? `Stock: ${p.stock_actual}`
+                              : "Agotado"}
                           </Text>
                         </View>
                         <Text style={styles.productoItemPrecio}>
@@ -571,6 +662,9 @@ export default function NuevoPagoScreen() {
                             ₡{item.precio_unitario.toLocaleString()} /{" "}
                             {item.unidad_medida.toLowerCase()}
                           </Text>
+                          <Text style={styles.carritoItemStock}>
+                            Disponibles: {item.stock_disponible}
+                          </Text>
                         </View>
                         <View style={styles.cantidadRow}>
                           <TouchableOpacity
@@ -583,8 +677,13 @@ export default function NuevoPagoScreen() {
                           </TouchableOpacity>
                           <Text style={styles.cantNum}>{item.cantidad}</Text>
                           <TouchableOpacity
-                            style={styles.cantBtn}
+                            style={[
+                              styles.cantBtn,
+                              item.cantidad >= item.stock_disponible &&
+                                styles.cantBtnDisabled,
+                            ]}
                             onPress={() => cambiarCantidad(item.id_producto, 1)}
+                            disabled={item.cantidad >= item.stock_disponible}
                           >
                             <Text style={styles.cantBtnText}>+</Text>
                           </TouchableOpacity>
@@ -650,15 +749,15 @@ export default function NuevoPagoScreen() {
                       metodoSeleccionado?.id_metodo === m.id_metodo &&
                         styles.metodoCardActive,
                     ]}
-                    onPress={() => setMetodoSeleccionado(m)}
+                    onPress={() => seleccionarMetodo(m)}
                   >
                     <MaterialIcons
                       name={
-                        m.nombre === "Efectivo"
-                          ? "attach-money"
-                          : m.nombre === "Tarjeta"
-                            ? "credit-card"
-                            : "account-balance"
+                        m.codigo === "TARJETA"
+                          ? "credit-card"
+                          : m.codigo === "SINPE"
+                            ? "phone-android"
+                            : "account-balance-wallet"
                       }
                       size={28}
                       color={
@@ -689,87 +788,140 @@ export default function NuevoPagoScreen() {
                 ))}
               </View>
 
-              {/* Efectivo */}
-              {metodoSeleccionado?.nombre === "Efectivo" && (
+              {/* Tarjeta */}
+              {metodoSeleccionado?.codigo === "TARJETA" && (
                 <View style={styles.block}>
-                  <Text style={styles.sectionLabel}>EFECTIVO</Text>
-                  <Text style={styles.fieldLabel}>
-                    MONTO RECIBIDO <Text style={styles.req}>*</Text>
-                  </Text>
-                  <Input
-                    placeholder="₡0"
-                    keyboardType="numeric"
-                    value={montoRecibido}
-                    onChangeText={setMontoRecibido}
-                    inputStyle={styles.inputText}
-                    inputContainerStyle={styles.inputContainer}
-                    containerStyle={styles.inputWrapper}
-                  />
-                  {montoRecibido && Number(montoRecibido) >= montoTotal ? (
-                    <View style={styles.cambioBox}>
-                      <Text style={styles.cambioLabel}>CAMBIO</Text>
-                      <Text style={styles.cambioVal}>
-                        ₡{(Number(montoRecibido) - montoTotal).toLocaleString()}
+                  <View style={styles.pasarelaHeader}>
+                    <View>
+                      <Text style={styles.sectionLabel}>DATOS DE TARJETA</Text>
+                      <Text style={styles.pasarelaSub}>
+                        Procesamiento bancario seguro
                       </Text>
                     </View>
-                  ) : null}
-                </View>
-              )}
-
-              {/* Tarjeta */}
-              {metodoSeleccionado?.nombre === "Tarjeta" && (
-                <View style={styles.block}>
-                  <Text style={styles.sectionLabel}>TARJETA</Text>
+                    {marcaTarjeta === "VISA" && (
+                      <View style={styles.visaBadge}>
+                        <Text style={styles.visaText}>VISA</Text>
+                      </View>
+                    )}
+                    {marcaTarjeta === "MASTERCARD" && (
+                      <View style={styles.mastercardBadge}>
+                        <View style={[styles.mastercardCircle, styles.mastercardRed]} />
+                        <View style={[styles.mastercardCircle, styles.mastercardGold]} />
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.fieldLabel}>
-                    NÚMERO DE AUTORIZACIÓN (opcional)
+                    NÚMERO DE TARJETA <Text style={styles.req}>*</Text>
                   </Text>
                   <Input
-                    placeholder="Ej: 123456"
-                    value={referencia}
-                    onChangeText={setReferencia}
+                    placeholder="Número de 16 dígitos"
+                    keyboardType="number-pad"
+                    maxLength={19}
+                    value={numeroTarjeta}
+                    onChangeText={(value) => setNumeroTarjeta(formatearTarjeta(value))}
+                    leftIcon={
+                      <MaterialIcons name="credit-card" size={20} color={Colors.gray} />
+                    }
                     inputStyle={styles.inputText}
-                    inputContainerStyle={styles.inputContainer}
+                    inputContainerStyle={[
+                      styles.inputContainer,
+                      numeroTarjeta.length > 0 &&
+                        (!numeroTarjetaValido || !marcaTarjeta) &&
+                        styles.inputContainerError,
+                    ]}
                     containerStyle={styles.inputWrapper}
                   />
-                </View>
-              )}
-
-              {/* Transferencia */}
-              {metodoSeleccionado?.nombre === "Transferencia" && (
-                <View style={styles.block}>
-                  <Text style={styles.sectionLabel}>TRANSFERENCIA</Text>
-                  <Text style={styles.fieldLabel}>
-                    NÚMERO DE COMPROBANTE <Text style={styles.req}>*</Text>
+                  <Text style={styles.helperText}>
+                    Visa inicia con 4; Mastercard con 5 o 2. Debe tener 16 dígitos.
                   </Text>
-                  <Input
-                    placeholder="Ej: 987654321"
-                    value={referencia}
-                    onChangeText={setReferencia}
-                    inputStyle={styles.inputText}
-                    inputContainerStyle={styles.inputContainer}
-                    containerStyle={styles.inputWrapper}
-                  />
-                  <Text style={styles.fieldLabel}>BANCO (opcional)</Text>
-                  <View style={styles.bancosRow}>
-                    {BANCOS.map((b) => (
-                      <TouchableOpacity
-                        key={b}
-                        style={[
-                          styles.bancoChip,
-                          banco === b && styles.bancoChipActive,
+                  <View style={styles.cardFieldsRow}>
+                    <View style={styles.cardField}>
+                      <Text style={styles.fieldLabel}>
+                        VENCIMIENTO <Text style={styles.req}>*</Text>
+                      </Text>
+                      <Input
+                        placeholder="MM/AA"
+                        keyboardType="number-pad"
+                        maxLength={5}
+                        value={fechaVencimiento}
+                        onChangeText={(value) =>
+                          setFechaVencimiento(formatearVencimiento(value))
+                        }
+                        inputStyle={styles.inputText}
+                        inputContainerStyle={[
+                          styles.inputContainer,
+                          fechaVencimiento.length === 5 &&
+                            !vencimientoValido(fechaVencimiento) &&
+                            styles.inputContainerError,
                         ]}
-                        onPress={() => setBanco(banco === b ? "" : b)}
-                      >
-                        <Text
-                          style={[
-                            styles.bancoChipText,
-                            banco === b && styles.bancoChipTextActive,
-                          ]}
-                        >
-                          {b}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                        containerStyle={styles.inputWrapper}
+                      />
+                    </View>
+                    <View style={styles.cardField}>
+                      <Text style={styles.fieldLabel}>
+                        CVV <Text style={styles.req}>*</Text>
+                      </Text>
+                      <Input
+                        placeholder="•••"
+                        keyboardType="number-pad"
+                        maxLength={3}
+                        secureTextEntry
+                        value={cvv}
+                        onChangeText={(value) => setCvv(soloDigitos(value, 3))}
+                        inputStyle={styles.inputText}
+                        inputContainerStyle={styles.inputContainer}
+                        containerStyle={styles.inputWrapper}
+                      />
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* SINPE Móvil */}
+              {metodoSeleccionado?.codigo === "SINPE" && (
+                <View style={styles.block}>
+                  <Text style={styles.sectionLabel}>SINPE MÓVIL</Text>
+                  <Text style={styles.fieldLabel}>
+                    NÚMERO DE TELÉFONO <Text style={styles.req}>*</Text>
+                  </Text>
+                  <Input
+                    placeholder="Número de 8 dígitos"
+                    keyboardType="phone-pad"
+                    maxLength={8}
+                    value={telefonoSinpe}
+                    onChangeText={(value) =>
+                      setTelefonoSinpe(soloDigitos(value, 8))
+                    }
+                    leftIcon={
+                      <MaterialIcons name="phone-android" size={20} color={Colors.gray} />
+                    }
+                    inputStyle={styles.inputText}
+                    inputContainerStyle={styles.inputContainer}
+                    containerStyle={styles.inputWrapper}
+                  />
+                  <Text style={styles.helperText}>
+                    Debe tener 8 dígitos y estar ligado a una cuenta bancaria.
+                  </Text>
+                </View>
+              )}
+
+              {/* PayPal */}
+              {metodoSeleccionado?.codigo === "PAYPAL" && (
+                <View style={styles.block}>
+                  <Text style={styles.sectionLabel}>PAGO CON PAYPAL</Text>
+                  <View style={styles.paypalInfo}>
+                    <MaterialIcons
+                      name="open-in-new"
+                      size={22}
+                      color="#003087"
+                    />
+                    <View style={styles.paypalInfoText}>
+                      <Text style={styles.paypalTitle}>Continuarás en PayPal</Text>
+                      <Text style={styles.paypalDescription}>
+                        Inicia sesión y aprueba el monto convertido a USD.
+                        RetroGarage no recibe ni almacena tu contraseña de PayPal.
+                      </Text>
+                    </View>
                   </View>
                 </View>
               )}
@@ -864,12 +1016,20 @@ export default function NuevoPagoScreen() {
               ) : (
                 <View style={styles.registrarBtnInner}>
                   <MaterialIcons
-                    name="receipt"
+                    name={
+                      metodoSeleccionado?.codigo === "PAYPAL"
+                        ? "open-in-new"
+                        : "receipt"
+                    }
                     size={16}
                     color="white"
                     style={{ marginRight: sp(8) }}
                   />
-                  <Text style={styles.navBtnPrimarioText}>Registrar pago</Text>
+                  <Text style={styles.navBtnPrimarioText}>
+                    {metodoSeleccionado?.codigo === "PAYPAL"
+                      ? "Continuar con PayPal"
+                      : "Registrar pago"}
+                  </Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -981,6 +1141,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: sp(10),
     backgroundColor: Colors.white,
   },
+  inputContainerError: { borderColor: "#993C1D" },
   inputText: { fontSize: fs(14), color: Colors.primary },
   inputWrapper: { paddingHorizontal: 0, marginBottom: sp(8) },
   tipoCard: {
@@ -1074,6 +1235,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
+  productoItemDisabled: { opacity: 0.45 },
   productoItemLeft: { flex: 1 },
   productoItemNombre: {
     fontSize: fs(13),
@@ -1119,6 +1281,12 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   carritoItemPrecio: { fontSize: fs(11), color: Colors.gray, marginTop: sp(2) },
+  carritoItemStock: {
+    fontSize: fs(10),
+    color: "#0F6E56",
+    fontWeight: "600",
+    marginTop: sp(2),
+  },
   cantidadRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1211,39 +1379,89 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  cambioBox: {
+  cantBtnDisabled: { opacity: 0.3 },
+  pasarelaHeader: {
+    minHeight: sp(38),
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#E8F5E9",
+    justifyContent: "space-between",
+    marginBottom: sp(14),
+  },
+  pasarelaSub: {
+    color: Colors.gray,
+    fontSize: fs(11),
+    marginTop: sp(-8),
+  },
+  visaBadge: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "#1A1F71",
+    borderWidth: 1,
+    borderRadius: sp(5),
+    paddingHorizontal: sp(10),
+    paddingVertical: sp(5),
+  },
+  visaText: {
+    color: "#1A1F71",
+    fontSize: fs(14),
+    fontStyle: "italic",
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  mastercardBadge: {
+    width: sp(54),
+    height: sp(32),
+    position: "relative",
+  },
+  mastercardCircle: {
+    position: "absolute",
+    width: sp(30),
+    height: sp(30),
+    borderRadius: sp(15),
+    top: sp(1),
+  },
+  mastercardRed: { left: 0, backgroundColor: "#EB001B" },
+  mastercardGold: {
+    right: 0,
+    backgroundColor: "#F79E1B",
+    opacity: 0.88,
+  },
+  helperText: {
+    color: Colors.gray,
+    fontSize: fs(11),
+    lineHeight: fs(16),
+    marginHorizontal: sp(10),
+    marginTop: sp(-8),
+    marginBottom: sp(12),
+  },
+  paypalInfo: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#F4F7FB",
+    borderColor: "#B7C9E2",
+    borderWidth: 1,
     borderRadius: sp(8),
     padding: sp(14),
+  },
+  paypalInfoText: {
+    flex: 1,
+    marginLeft: sp(12),
+  },
+  paypalTitle: {
+    color: "#003087",
+    fontSize: fs(14),
+    fontWeight: "700",
+  },
+  paypalDescription: {
+    color: Colors.gray,
+    fontSize: fs(11),
+    lineHeight: fs(17),
     marginTop: sp(4),
   },
-  cambioLabel: { fontSize: fs(13), fontWeight: "600", color: "#2E7D32" },
-  cambioVal: { fontSize: fs(20), fontWeight: "700", color: "#2E7D32" },
-  bancosRow: {
+  cardFieldsRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    marginLeft: sp(10),
-    marginBottom: sp(8),
+    columnGap: sp(10),
   },
-  bancoChip: {
-    paddingHorizontal: sp(12),
-    paddingVertical: sp(7),
-    borderRadius: sp(6),
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.white,
-    marginRight: sp(8),
-    marginBottom: sp(8),
-  },
-  bancoChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  bancoChipText: { fontSize: fs(12), color: Colors.primary, fontWeight: "500" },
-  bancoChipTextActive: { color: Colors.cream },
+  cardField: { flex: 1 },
   navRow: {
     flexDirection: "row",
     justifyContent: "space-between",

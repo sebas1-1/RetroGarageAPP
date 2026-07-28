@@ -4,6 +4,7 @@ const BASE_URL = "http://localhost:3001/api";
 // Metodo de pago disponible para registrar cobros.
 export interface MetodoPago {
   id_metodo: number;
+  codigo: "TARJETA" | "SINPE" | "PAYPAL";
   nombre: string;
   requiere_referencia: boolean;
 }
@@ -14,6 +15,7 @@ export interface ItemCarrito {
   nombre: string;
   precio_unitario: number;
   cantidad: number;
+  stock_disponible: number;
   unidad_medida: string;
 }
 
@@ -23,11 +25,18 @@ export interface PagoInput {
   id_usuario: number;
   id_metodo: number;
   monto: number;
-  monto_recibido?: number | null;
-  cambio?: number | null;
-  numero_referencia?: string | null;
-  banco?: string | null;
   observaciones?: string | null;
+  datos_pasarela:
+    | {
+        tipo: "TARJETA";
+        numero_tarjeta: string;
+        fecha_vencimiento: string;
+        cvv: string;
+      }
+    | {
+        tipo: "SINPE";
+        telefono: string;
+      };
   productos: {
     id_producto: number;
     cantidad: number;
@@ -39,6 +48,47 @@ export interface PagoInput {
 export interface PagoResult {
   id_pago: number;
   numero_factura: string;
+  id_transaccion: number;
+  codigo_autorizacion: string;
+  metodo: "TARJETA" | "SINPE" | "PAYPAL";
+  marca_tarjeta?: "VISA" | "MASTERCARD" | null;
+  banco: string;
+  mensaje: string;
+}
+
+export interface OrdenPayPalInput {
+  id_cita?: number | null;
+  id_usuario: number;
+  id_metodo: number;
+  monto: number;
+  observaciones?: string | null;
+  productos: {
+    id_producto: number;
+    cantidad: number;
+    precio_unitario: number;
+  }[];
+}
+
+export interface OrdenPayPalResult {
+  referencia: string;
+  paypal_order_id: string;
+  url_aprobacion: string;
+  monto_crc: number;
+  monto_usd: number;
+  moneda: "USD";
+}
+
+export interface CapturaPayPalResult {
+  id_pago: number;
+  numero_factura: string;
+  id_transaccion: number;
+  paypal_order_id: string;
+  paypal_capture_id: string;
+  metodo: "PAYPAL";
+  monto_crc: number;
+  monto_usd: number;
+  moneda: "USD";
+  mensaje: string;
 }
 
 // Maneja respuestas exitosas y errores de la API en un solo lugar.
@@ -67,4 +117,34 @@ export const pagosService = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then(handle),
+
+  crearOrdenPayPal: (data: OrdenPayPalInput): Promise<OrdenPayPalResult> =>
+    apiFetch(`${BASE_URL}/pagos/paypal/ordenes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).then(handle),
+
+  capturarOrdenPayPal: (
+    referencia: string,
+    paypalOrderId: string,
+  ): Promise<CapturaPayPalResult> =>
+    apiFetch(
+      `${BASE_URL}/pagos/paypal/ordenes/${encodeURIComponent(referencia)}/capturar`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paypal_order_id: paypalOrderId }),
+      },
+    ).then(handle),
+
+  cancelarOrdenPayPal: (referencia: string): Promise<{ estado: string }> =>
+    apiFetch(
+      `${BASE_URL}/pagos/paypal/ordenes/${encodeURIComponent(referencia)}/cancelar`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      },
+    ).then(handle),
 };

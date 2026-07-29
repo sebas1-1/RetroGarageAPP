@@ -76,6 +76,17 @@ export interface OrdenPayPalResult {
   monto_crc: number;
   monto_usd: number;
   moneda: "USD";
+  tipo_cambio: TipoCambio;
+}
+
+export interface TipoCambio {
+  moneda_origen?: "CRC";
+  moneda_destino?: "USD";
+  compra: number | null;
+  venta: number;
+  fecha: string | null;
+  fuente: "HACIENDA_BCCR" | "CONFIGURACION_RESPALDO";
+  es_respaldo: boolean;
 }
 
 export interface CapturaPayPalResult {
@@ -124,6 +135,9 @@ export const pagosService = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then(handle),
+
+  getTipoCambio: (): Promise<TipoCambio> =>
+    apiFetch(`${BASE_URL}/pagos/paypal/tipo-cambio`).then(handle),
 
   capturarOrdenPayPal: (
     referencia: string,

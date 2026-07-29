@@ -22,6 +22,7 @@ import {
   ItemCarrito,
   MetodoPago,
   pagosService,
+  TipoCambio,
 } from "../../services/pagosService";
 import { Servicio, serviciosService } from "../../services/serviciosService";
 
@@ -90,6 +91,8 @@ export default function NuevoPagoScreen() {
   const [telefonoSinpe, setTelefonoSinpe] = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [tipoCambio, setTipoCambio] = useState<TipoCambio | null>(null);
+  const [cargandoTipoCambio, setCargandoTipoCambio] = useState(false);
 
   const [messageDialog, setMessageDialog] = useState<{
     title: string;
@@ -238,6 +241,18 @@ export default function NuevoPagoScreen() {
 
   const seleccionarMetodo = (metodo: MetodoPago) => {
     setMetodoSeleccionado(metodo);
+    if (
+      metodo.codigo === "PAYPAL" &&
+      !tipoCambio &&
+      !cargandoTipoCambio
+    ) {
+      setCargandoTipoCambio(true);
+      pagosService
+        .getTipoCambio()
+        .then(setTipoCambio)
+        .catch(() => setTipoCambio(null))
+        .finally(() => setCargandoTipoCambio(false));
+    }
   };
 
   // Reglas simples para habilitar avance entre pasos y confirmacion.
@@ -923,6 +938,39 @@ export default function NuevoPagoScreen() {
                       </Text>
                     </View>
                   </View>
+                  <View style={styles.exchangeRateBox}>
+                    {cargandoTipoCambio ? (
+                      <ActivityIndicator size="small" color="#003087" />
+                    ) : tipoCambio ? (
+                      <>
+                        <View style={styles.exchangeRateRow}>
+                          <Text style={styles.exchangeRateLabel}>
+                            Tipo de cambio de venta
+                          </Text>
+                          <Text style={styles.exchangeRateValue}>
+                            ₡{tipoCambio.venta.toFixed(2)} por USD
+                          </Text>
+                        </View>
+                        <View style={styles.exchangeRateRow}>
+                          <Text style={styles.exchangeRateLabel}>
+                            Total estimado
+                          </Text>
+                          <Text style={styles.exchangeRateTotal}>
+                            USD {(montoTotal / tipoCambio.venta).toFixed(2)}
+                          </Text>
+                        </View>
+                        <Text style={styles.exchangeRateSource}>
+                          {tipoCambio.es_respaldo
+                            ? "Tasa de respaldo del sistema"
+                            : `Indicador Hacienda/BCCR${tipoCambio.fecha ? ` · ${tipoCambio.fecha}` : ""}`}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={styles.exchangeRateSource}>
+                        El tipo de cambio se calculará al continuar.
+                      </Text>
+                    )}
+                  </View>
                 </View>
               )}
 
@@ -1456,6 +1504,39 @@ const styles = StyleSheet.create({
     fontSize: fs(11),
     lineHeight: fs(17),
     marginTop: sp(4),
+  },
+  exchangeRateBox: {
+    backgroundColor: Colors.white,
+    borderColor: Colors.border,
+    borderWidth: 1,
+    borderRadius: sp(8),
+    padding: sp(12),
+    marginTop: sp(10),
+  },
+  exchangeRateRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: sp(3),
+  },
+  exchangeRateLabel: {
+    color: Colors.gray,
+    fontSize: fs(11),
+  },
+  exchangeRateValue: {
+    color: Colors.primary,
+    fontSize: fs(12),
+    fontWeight: "600",
+  },
+  exchangeRateTotal: {
+    color: "#003087",
+    fontSize: fs(14),
+    fontWeight: "700",
+  },
+  exchangeRateSource: {
+    color: Colors.gray,
+    fontSize: fs(10),
+    marginTop: sp(6),
   },
   cardFieldsRow: {
     flexDirection: "row",

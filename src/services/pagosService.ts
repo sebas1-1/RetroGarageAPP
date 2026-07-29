@@ -76,7 +76,6 @@ export interface OrdenPayPalResult {
   monto_crc: number;
   monto_usd: number;
   moneda: "USD";
-  tipo_cambio: TipoCambio;
 }
 
 export interface TipoCambio {
@@ -137,7 +136,7 @@ export const pagosService = {
     }).then(handle),
 
   getTipoCambio: (): Promise<TipoCambio> =>
-    apiFetch(`${BASE_URL}/pagos/paypal/tipo-cambio`).then(handle),
+    apiFetch(`${BASE_URL}/pagos/tipo-cambio`).then(handle),
 
   capturarOrdenPayPal: (
     referencia: string,

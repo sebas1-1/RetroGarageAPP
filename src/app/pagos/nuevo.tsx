@@ -242,7 +242,7 @@ export default function NuevoPagoScreen() {
   const seleccionarMetodo = (metodo: MetodoPago) => {
     setMetodoSeleccionado(metodo);
     if (
-      metodo.codigo === "PAYPAL" &&
+      metodo.codigo !== "PAYPAL" &&
       !tipoCambio &&
       !cargandoTipoCambio
     ) {
@@ -920,6 +920,51 @@ export default function NuevoPagoScreen() {
                 </View>
               )}
 
+              {/* Referencia cambiaria para pagos locales */}
+              {metodoSeleccionado &&
+                metodoSeleccionado.codigo !== "PAYPAL" && (
+                  <View style={styles.block}>
+                    <Text style={styles.sectionLabel}>
+                      REFERENCIA DE TIPO DE CAMBIO
+                    </Text>
+                    <View style={styles.exchangeRateBox}>
+                      {cargandoTipoCambio ? (
+                        <ActivityIndicator size="small" color="#003087" />
+                      ) : tipoCambio ? (
+                        <>
+                          <View style={styles.exchangeRateRow}>
+                            <Text style={styles.exchangeRateLabel}>
+                              Tipo de cambio de venta
+                            </Text>
+                            <Text style={styles.exchangeRateValue}>
+                              ₡{tipoCambio.venta.toFixed(2)} por USD
+                            </Text>
+                          </View>
+                          <View style={styles.exchangeRateRow}>
+                            <Text style={styles.exchangeRateLabel}>
+                              Equivalente informativo
+                            </Text>
+                            <Text style={styles.exchangeRateTotal}>
+                              USD {(montoTotal / tipoCambio.venta).toFixed(2)}
+                            </Text>
+                          </View>
+                          <Text style={styles.exchangeRateSource}>
+                            El cobro se realiza en colones.{"\n"}
+                            {tipoCambio.es_respaldo
+                              ? "Tasa de respaldo del sistema"
+                              : `Indicador Hacienda/BCCR${tipoCambio.fecha ? ` · ${tipoCambio.fecha}` : ""}`}
+                          </Text>
+                        </>
+                      ) : (
+                        <Text style={styles.exchangeRateSource}>
+                          No fue posible mostrar la referencia cambiaria.
+                          El cobro continuará en colones.
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                )}
+
               {/* PayPal */}
               {metodoSeleccionado?.codigo === "PAYPAL" && (
                 <View style={styles.block}>
@@ -937,39 +982,6 @@ export default function NuevoPagoScreen() {
                         RetroGarage no recibe ni almacena tu contraseña de PayPal.
                       </Text>
                     </View>
-                  </View>
-                  <View style={styles.exchangeRateBox}>
-                    {cargandoTipoCambio ? (
-                      <ActivityIndicator size="small" color="#003087" />
-                    ) : tipoCambio ? (
-                      <>
-                        <View style={styles.exchangeRateRow}>
-                          <Text style={styles.exchangeRateLabel}>
-                            Tipo de cambio de venta
-                          </Text>
-                          <Text style={styles.exchangeRateValue}>
-                            ₡{tipoCambio.venta.toFixed(2)} por USD
-                          </Text>
-                        </View>
-                        <View style={styles.exchangeRateRow}>
-                          <Text style={styles.exchangeRateLabel}>
-                            Total estimado
-                          </Text>
-                          <Text style={styles.exchangeRateTotal}>
-                            USD {(montoTotal / tipoCambio.venta).toFixed(2)}
-                          </Text>
-                        </View>
-                        <Text style={styles.exchangeRateSource}>
-                          {tipoCambio.es_respaldo
-                            ? "Tasa de respaldo del sistema"
-                            : `Indicador Hacienda/BCCR${tipoCambio.fecha ? ` · ${tipoCambio.fecha}` : ""}`}
-                        </Text>
-                      </>
-                    ) : (
-                      <Text style={styles.exchangeRateSource}>
-                        El tipo de cambio se calculará al continuar.
-                      </Text>
-                    )}
                   </View>
                 </View>
               )}

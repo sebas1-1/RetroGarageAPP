@@ -18,6 +18,7 @@ import { fs, sp } from "../../constants/responsive";
 import { Auto, autosService } from "../../services/autosService";
 import { citasService } from "../../services/citasService";
 import { Cliente, clientesService } from "../../services/clientesService";
+import { serviciosService } from "../../services/serviciosService";
 
 interface Servicio {
   id_servicio: number;
@@ -62,18 +63,13 @@ export default function NuevaCitaScreen() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Al abrir la pantalla se cargan clientes y servicios disponibles.
-  useEffect(() => {
-    cargarDatos();
-  }, []);
-
   // Obtiene datos necesarios para llenar selectores del formulario.
-  const cargarDatos = async () => {
+  async function cargarDatos() {
     try {
       setCargando(true);
       const [cls, svcs] = await Promise.all([
         clientesService.getAll(),
-        fetch("http://localhost:3001/api/servicios").then((r) => r.json()),
+        serviciosService.getAll(),
       ]);
       setClientes(cls);
       setServicios(svcs);
@@ -83,6 +79,14 @@ export default function NuevaCitaScreen() {
       setCargando(false);
     }
   };
+
+  // Al abrir la pantalla se cargan clientes y servicios disponibles.
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void cargarDatos();
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
@@ -151,7 +155,6 @@ export default function NuevaCitaScreen() {
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
       const fechaCita = new Date(form.fecha + "T00:00:00");
-      const [hh, mm] = form.hora.split(":").map(Number);
       const horaCita = new Date(form.fecha + `T${form.hora}:00`);
 
       // Solo comparar hora si la cita es hoy

@@ -38,7 +38,7 @@ export default function ServiciosScreen() {
   );
 
   // Consulta servicios desde la API aplicando busqueda si existe.
-  const cargarServicios = async (texto = "") => {
+  async function cargarServicios(texto = "") {
     try {
       setCargando(true);
       setServicios(await serviciosService.getAll(texto));

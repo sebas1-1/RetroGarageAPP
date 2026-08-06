@@ -1,3 +1,5 @@
+import { SIMULATIONS_API_BASE_URL } from "../config/api";
+
 export interface PolizaSocio {
   id_poliza: number;
   aseguradora: string;
@@ -12,9 +14,6 @@ export interface PolizaSocio {
   vigente: boolean;
 }
 
-const SOCIOS_API_URL =
-  process.env.EXPO_PUBLIC_SOCIOS_API_URL ?? "http://127.0.0.1:8000";
-
 export const aseguradorasService = {
   buscarPorPlaca: async (placa: string): Promise<PolizaSocio | null> => {
     const placaLimpia = placa.trim().replace(/[-\s]/g, "").toUpperCase();
@@ -24,7 +23,7 @@ export const aseguradorasService = {
     }
 
     const respuesta = await fetch(
-      `${SOCIOS_API_URL}/socios/aseguradoras/polizas/${encodeURIComponent(
+      `${SIMULATIONS_API_BASE_URL}/socios/aseguradoras/polizas/${encodeURIComponent(
         placaLimpia,
       )}`,
     );

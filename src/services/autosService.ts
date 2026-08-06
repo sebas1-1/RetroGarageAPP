@@ -1,5 +1,5 @@
+import { API_BASE_URL } from "../config/api";
 import { apiFetch } from "./apiFetch";
-const BASE_URL = "http://localhost:3001/api";
 
 export interface Auto {
   id_auto?: number;
@@ -20,19 +20,19 @@ async function handle(res: Response) {
 
 export const autosService = {
   getByIdentificacion: (identificacion: string) =>
-    apiFetch(`${BASE_URL}/autos?identificacion=${encodeURIComponent(identificacion)}`).then(
+    apiFetch(`${API_BASE_URL}/autos?identificacion=${encodeURIComponent(identificacion)}`).then(
       handle,
     ),
 
   crear: (data: AutoInput) =>
-    apiFetch(`${BASE_URL}/autos`, {
+    apiFetch(`${API_BASE_URL}/autos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then(handle),
 
   reemplazarPorIdentificacion: (identificacion: string, autos: AutoInput[]) =>
-    apiFetch(`${BASE_URL}/autos/cliente/${encodeURIComponent(identificacion)}`, {
+    apiFetch(`${API_BASE_URL}/autos/cliente/${encodeURIComponent(identificacion)}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ autos }),

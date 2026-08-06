@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Colors } from "../constants/colors";
 import { fs, screen, sp } from "../constants/responsive";
-import { Cita } from "../services/citasService";
+import { Cita, citasService } from "../services/citasService";
 import { pagosService } from "../services/pagosService";
 
 interface PagoDashboard {
@@ -69,8 +69,6 @@ const ACCESOS = [
   },
 ];
 
-const BASE_URL = "http://localhost:3001/api";
-
 // Dashboard principal: resume ingresos, citas del dia y accesos rapidos.
 export default function DashboardScreen() {
   const router = useRouter();
@@ -118,13 +116,6 @@ export default function DashboardScreen() {
       : hora < 18
         ? "Buenas tardes,"
         : "Buenas noches,";
-
-  // Cada vez que el usuario vuelve al dashboard se recargan los datos.
-  useFocusEffect(
-    useCallback(() => {
-      cargarDashboard();
-    }, []),
-  );
 
   const formatFechaKey = (date: Date) =>
     `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -185,27 +176,33 @@ export default function DashboardScreen() {
   };
 
   // Consulta citas pendientes de hoy y pagos para pintar el resumen principal.
-  const cargarDashboard = async () => {
+  async function cargarDashboard() {
     try {
       setCargando(true);
 
       const fechaHoy = formatFechaKey(hoy);
       const [citasData, pagosData] = await Promise.all([
-        fetch(`${BASE_URL}/citas?estado=PENDIENTE&fecha=${fechaHoy}`).then(
-          (r) => r.json(),
-        ),
+        citasService.getAll("", "PENDIENTE", fechaHoy),
         pagosService.getAll(),
       ]);
 
       setCitas(citasData);
       setIngresos(calcularIngresos(Array.isArray(pagosData) ? pagosData : []));
-    } catch (e) {
+    } catch {
       setCitas([]);
       setIngresos({ hoy: 0, ayer: 0, mes: 0, mesAnterior: 0 });
     } finally {
       setCargando(false);
     }
   };
+
+  // Cada vez que el usuario vuelve al dashboard se recargan los datos.
+  useFocusEffect(
+    useCallback(() => {
+      void cargarDashboard();
+    }, []),
+  );
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>

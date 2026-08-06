@@ -41,13 +41,8 @@ export default function NuevoServicioScreen() {
     onClose?.();
   };
 
-  // Carga categorias para asociarlas al servicio.
-  useEffect(() => {
-    cargarCategorias();
-  }, []);
-
   // Consulta las categorias disponibles para el selector.
-  const cargarCategorias = async () => {
+  async function cargarCategorias() {
     try {
       setCargando(true);
       const data: Categoria[] = await categoriasService.getAll();
@@ -58,6 +53,14 @@ export default function NuevoServicioScreen() {
       setCargando(false);
     }
   };
+
+  // Carga categorias para asociarlas al servicio.
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void cargarCategorias();
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));

@@ -86,13 +86,8 @@ export default function NuevoProductoScreen() {
     onClose?.();
   };
 
-  // Carga categorias para que el producto pueda clasificarse.
-  useEffect(() => {
-    cargarCategorias();
-  }, []);
-
   // Consulta solo las categorias necesarias para el formulario.
-  const cargarCategorias = async () => {
+  async function cargarCategorias() {
     try {
       const data: Categoria[] = await categoriasService.getAll();
       setCategorias(data.filter((c) => c.tipo === "PRODUCTO" && c.activo));
@@ -100,6 +95,14 @@ export default function NuevoProductoScreen() {
       setMessageDialog({ title: "Error", message: e.message });
     }
   };
+
+  // Carga categorias para que el producto pueda clasificarse.
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void cargarCategorias();
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));

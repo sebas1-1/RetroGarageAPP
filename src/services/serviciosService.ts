@@ -1,5 +1,5 @@
+import { API_BASE_URL } from "../config/api";
 import { apiFetch } from "./apiFetch";
-const BASE_URL = "http://localhost:3001/api";
 
 // Servicio que ofrece el taller y que puede usarse en citas o pagos.
 export interface Servicio {
@@ -35,18 +35,18 @@ export const serviciosService = {
   // Lista servicios y permite filtrar por texto.
   getAll: (buscar = "") =>
     apiFetch(
-      `${BASE_URL}/servicios${buscar ? `?buscar=${encodeURIComponent(buscar)}` : ""}`,
+      `${API_BASE_URL}/servicios${buscar ? `?buscar=${encodeURIComponent(buscar)}` : ""}`,
     ).then(handle),
 
   // Obtiene un servicio por id.
-  getById: (id: number) => apiFetch(`${BASE_URL}/servicios/${id}`).then(handle),
+  getById: (id: number) => apiFetch(`${API_BASE_URL}/servicios/${id}`).then(handle),
 
   // Carga categorias disponibles para servicios.
-  getCategorias: () => apiFetch(`${BASE_URL}/servicios/categorias`).then(handle),
+  getCategorias: () => apiFetch(`${API_BASE_URL}/servicios/categorias`).then(handle),
 
   // Crea un servicio nuevo con categoria y precio base.
   crear: (data: ServicioInput) =>
-    apiFetch(`${BASE_URL}/servicios`, {
+    apiFetch(`${API_BASE_URL}/servicios`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -54,7 +54,7 @@ export const serviciosService = {
 
   // Actualiza un servicio existente.
   editar: (id: number, data: ServicioInput) =>
-    apiFetch(`${BASE_URL}/servicios/${id}`, {
+    apiFetch(`${API_BASE_URL}/servicios/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -62,5 +62,5 @@ export const serviciosService = {
 
   // Elimina un servicio por id.
   eliminar: (id: number) =>
-    apiFetch(`${BASE_URL}/servicios/${id}`, { method: "DELETE" }).then(handle),
+    apiFetch(`${API_BASE_URL}/servicios/${id}`, { method: "DELETE" }).then(handle),
 };

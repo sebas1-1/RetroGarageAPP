@@ -1,5 +1,5 @@
+import { API_BASE_URL } from "../config/api";
 import { apiFetch } from "./apiFetch";
-const BASE_URL = "http://localhost:3001/api";
 
 // Cliente registrado en el taller.
 export interface Cliente {
@@ -35,15 +35,15 @@ export const clientesService = {
   // Lista clientes y permite buscar por texto.
   getAll: (buscar = "") =>
     apiFetch(
-      `${BASE_URL}/clientes${buscar ? `?buscar=${encodeURIComponent(buscar)}` : ""}`,
+      `${API_BASE_URL}/clientes${buscar ? `?buscar=${encodeURIComponent(buscar)}` : ""}`,
     ).then(handle),
 
   // Obtiene un cliente puntual para cargar el formulario de edicion.
-  getById: (id: number) => apiFetch(`${BASE_URL}/clientes/${id}`).then(handle),
+  getById: (id: number) => apiFetch(`${API_BASE_URL}/clientes/${id}`).then(handle),
 
   // Registra un cliente nuevo.
   crear: (data: ClienteInput) =>
-    apiFetch(`${BASE_URL}/clientes`, {
+    apiFetch(`${API_BASE_URL}/clientes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -51,7 +51,7 @@ export const clientesService = {
 
   // Actualiza los datos de un cliente existente.
   editar: (id: number, data: ClienteInput) =>
-    apiFetch(`${BASE_URL}/clientes/${id}`, {
+    apiFetch(`${API_BASE_URL}/clientes/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -59,5 +59,5 @@ export const clientesService = {
 
   // Elimina el cliente seleccionado.
   eliminar: (id: number) =>
-    apiFetch(`${BASE_URL}/clientes/${id}`, { method: "DELETE" }).then(handle),
+    apiFetch(`${API_BASE_URL}/clientes/${id}`, { method: "DELETE" }).then(handle),
 };

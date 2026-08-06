@@ -53,19 +53,22 @@ export default function NuevoUsuarioScreen() {
     onClose?.();
   };
 
-  // Carga roles disponibles para asignar permisos al usuario.
-  useEffect(() => {
-    cargarRoles();
-  }, []);
-
   // Consulta roles desde el backend para el selector.
-  const cargarRoles = async () => {
+  async function cargarRoles() {
     try {
       setRoles(await usuariosService.getRoles());
     } catch (e: any) {
       setMessageDialog({ title: "Error", message: e.message });
     }
   };
+
+  // Carga roles disponibles para asignar permisos al usuario.
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void cargarRoles();
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));

@@ -54,13 +54,8 @@ export default function EditarProductoScreen() {
     onClose?.();
   };
 
-  // Carga producto y categorias cuando se recibe el id por la ruta.
-  useEffect(() => {
-    cargarDatos();
-  }, []);
-
   // Consulta la informacion necesaria para llenar el formulario.
-  const cargarDatos = async () => {
+  async function cargarDatos() {
     try {
       setCargando(true);
       const [producto, cats] = await Promise.all([
@@ -87,6 +82,14 @@ export default function EditarProductoScreen() {
       setCargando(false);
     }
   };
+
+  // Carga producto y categorias cuando se recibe el id por la ruta.
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void cargarDatos();
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [id]);
 
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));

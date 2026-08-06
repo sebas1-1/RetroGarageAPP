@@ -54,13 +54,8 @@ export default function EditarUsuarioScreen() {
     onClose?.();
   };
 
-  // Carga usuario y roles cuando recibe el id por la ruta.
-  useEffect(() => {
-    cargarDatos();
-  }, [id]);
-
   // Obtiene informacion actual para llenar el formulario.
-  const cargarDatos = async () => {
+  async function cargarDatos() {
     try {
       setCargando(true);
       const [data, rolesData] = await Promise.all([
@@ -87,6 +82,14 @@ export default function EditarUsuarioScreen() {
       setCargando(false);
     }
   };
+
+  // Carga usuario y roles cuando recibe el id por la ruta.
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void cargarDatos();
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [id]);
 
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));

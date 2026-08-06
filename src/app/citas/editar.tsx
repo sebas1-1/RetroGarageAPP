@@ -18,6 +18,7 @@ import { fs, sp } from "../../constants/responsive";
 import { Auto, autosService } from "../../services/autosService";
 import { citasService } from "../../services/citasService";
 import { Cliente, clientesService } from "../../services/clientesService";
+import { serviciosService } from "../../services/serviciosService";
 
 interface Servicio {
   id_servicio: number;
@@ -66,18 +67,28 @@ export default function EditarCitaScreen() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  useEffect(() => {
-    cargarDatos();
-  }, [id]);
+  async function cargarAutosCliente(cliente: Cliente) {
+    try {
+      setCargandoAutos(true);
+      const autos = await autosService.getByIdentificacion(
+        cliente.identificacion,
+      );
+      setAutosCliente(autos);
+    } catch {
+      setAutosCliente([]);
+    } finally {
+      setCargandoAutos(false);
+    }
+  }
 
   // Carga la cita actual junto con clientes y servicios para llenar el formulario.
-  const cargarDatos = async () => {
+  async function cargarDatos() {
     try {
       setCargando(true);
       const [cita, cls, svcs] = (await Promise.all([
         citasService.getById(Number(id)),
         clientesService.getAll(),
-        fetch("http://localhost:3001/api/servicios").then((r) => r.json()),
+        serviciosService.getAll(),
       ])) as [any, Cliente[], Servicio[]];
       setClientes(cls);
       setServicios(svcs);
@@ -108,22 +119,15 @@ export default function EditarCitaScreen() {
     }
   };
 
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void cargarDatos();
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [id]);
+
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
-
-  const cargarAutosCliente = async (cliente: Cliente) => {
-    try {
-      setCargandoAutos(true);
-      const autos = await autosService.getByIdentificacion(
-        cliente.identificacion,
-      );
-      setAutosCliente(autos);
-    } catch {
-      setAutosCliente([]);
-    } finally {
-      setCargandoAutos(false);
-    }
-  };
 
   const seleccionarCliente = (cliente: Cliente) => {
     setForm((f) => ({
@@ -179,7 +183,6 @@ export default function EditarCitaScreen() {
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
       const fechaCita = new Date(form.fecha + "T00:00:00");
-      const [hh, mm] = form.hora.split(":").map(Number);
       const horaCita = new Date(form.fecha + `T${form.hora}:00`);
 
       // Solo comparar hora si la cita es hoy

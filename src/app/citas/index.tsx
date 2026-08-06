@@ -51,7 +51,7 @@ export default function CitasScreen() {
   );
 
   // Consulta citas segun texto de busqueda y estado seleccionado.
-  const cargarCitas = async (texto = busqueda, estado = estadoFiltro) => {
+  async function cargarCitas(texto = busqueda, estado = estadoFiltro) {
     try {
       setCargando(true);
       setCitas(await citasService.getAll(texto, estado));

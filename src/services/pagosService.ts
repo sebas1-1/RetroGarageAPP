@@ -1,5 +1,5 @@
+import { API_BASE_URL } from "../config/api";
 import { apiFetch } from "./apiFetch";
-const BASE_URL = "http://localhost:3001/api";
 
 // Metodo de pago disponible para registrar cobros.
 export interface MetodoPago {
@@ -112,38 +112,38 @@ async function handle(res: Response) {
 export const pagosService = {
   // Lista los metodos de pago configurados.
   getMetodos: (): Promise<MetodoPago[]> =>
-    apiFetch(`${BASE_URL}/pagos/metodos/lista`).then(handle),
+    apiFetch(`${API_BASE_URL}/pagos/metodos/lista`).then(handle),
 
   // Trae todos los pagos registrados para reportes y listados.
-  getAll: () => apiFetch(`${BASE_URL}/pagos`).then(handle),
+  getAll: () => apiFetch(`${API_BASE_URL}/pagos`).then(handle),
 
   // Trae un pago especifico por id.
-  getById: (id: number) => apiFetch(`${BASE_URL}/pagos/${id}`).then(handle),
+  getById: (id: number) => apiFetch(`${API_BASE_URL}/pagos/${id}`).then(handle),
 
   // Guarda un pago con su metodo, monto y productos asociados.
   registrar: (data: PagoInput): Promise<PagoResult> =>
-    apiFetch(`${BASE_URL}/pagos`, {
+    apiFetch(`${API_BASE_URL}/pagos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then(handle),
 
   crearOrdenPayPal: (data: OrdenPayPalInput): Promise<OrdenPayPalResult> =>
-    apiFetch(`${BASE_URL}/pagos/paypal/ordenes`, {
+    apiFetch(`${API_BASE_URL}/pagos/paypal/ordenes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then(handle),
 
   getTipoCambio: (): Promise<TipoCambio> =>
-    apiFetch(`${BASE_URL}/pagos/tipo-cambio`).then(handle),
+    apiFetch(`${API_BASE_URL}/pagos/tipo-cambio`).then(handle),
 
   capturarOrdenPayPal: (
     referencia: string,
     paypalOrderId: string,
   ): Promise<CapturaPayPalResult> =>
     apiFetch(
-      `${BASE_URL}/pagos/paypal/ordenes/${encodeURIComponent(referencia)}/capturar`,
+      `${API_BASE_URL}/pagos/paypal/ordenes/${encodeURIComponent(referencia)}/capturar`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -153,7 +153,7 @@ export const pagosService = {
 
   cancelarOrdenPayPal: (referencia: string): Promise<{ estado: string }> =>
     apiFetch(
-      `${BASE_URL}/pagos/paypal/ordenes/${encodeURIComponent(referencia)}/cancelar`,
+      `${API_BASE_URL}/pagos/paypal/ordenes/${encodeURIComponent(referencia)}/cancelar`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

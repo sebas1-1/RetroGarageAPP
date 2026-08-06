@@ -43,13 +43,8 @@ export default function EditarServicioScreen() {
     onClose?.();
   };
 
-  // Carga servicio y categorias cuando llega el id por la ruta.
-  useEffect(() => {
-    cargarDatos();
-  }, [id]);
-
   // Obtiene datos actuales para llenar el formulario de edicion.
-  const cargarDatos = async () => {
+  async function cargarDatos() {
     try {
       setCargando(true);
       const [servicio, cats] = await Promise.all([
@@ -72,6 +67,14 @@ export default function EditarServicioScreen() {
       setCargando(false);
     }
   };
+
+  // Carga servicio y categorias cuando llega el id por la ruta.
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void cargarDatos();
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [id]);
 
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));

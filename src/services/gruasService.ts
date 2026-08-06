@@ -1,3 +1,5 @@
+import { SIMULATIONS_API_BASE_URL } from "../config/api";
+
 export interface GruaSocio {
   id_grua: number;
   empresa: string;
@@ -12,9 +14,6 @@ export interface GruaSocio {
   disponible: boolean;
 }
 
-const SOCIOS_API_URL =
-  process.env.EXPO_PUBLIC_SOCIOS_API_URL ?? "http://127.0.0.1:8000";
-
 export const gruasService = {
   getDisponibles: async (provincia = ""): Promise<GruaSocio[]> => {
     const provinciaLimpia = provincia.trim();
@@ -23,7 +22,7 @@ export const gruasService = {
       : "";
 
     const respuesta = await fetch(
-      `${SOCIOS_API_URL}/socios/gruas/disponibles${query}`,
+      `${SIMULATIONS_API_BASE_URL}/socios/gruas/disponibles${query}`,
     );
 
     if (!respuesta.ok) {

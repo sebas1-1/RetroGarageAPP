@@ -1,5 +1,5 @@
+import { API_BASE_URL } from "../config/api";
 import { apiFetch } from "./apiFetch";
-const BASE_URL = "http://localhost:3001/api";
 
 // Modelo de una cita tal como llega desde la API.
 export interface Cita {
@@ -42,17 +42,17 @@ async function handle(res: Response) {
 // Funciones que usan las pantallas para consultar y modificar citas.
 export const citasService = {
   // Lista citas y permite filtrar por texto o estado.
-  getAll: (buscar = "", estado = "") =>
+  getAll: (buscar = "", estado = "", fecha = "") =>
     apiFetch(
-      `${BASE_URL}/citas?buscar=${encodeURIComponent(buscar)}&estado=${estado}`,
+      `${API_BASE_URL}/citas?buscar=${encodeURIComponent(buscar)}&estado=${encodeURIComponent(estado)}${fecha ? `&fecha=${encodeURIComponent(fecha)}` : ""}`,
     ).then(handle),
 
   // Obtiene una cita especifica para editarla o ver su detalle.
-  getById: (id: number) => apiFetch(`${BASE_URL}/citas/${id}`).then(handle),
+  getById: (id: number) => apiFetch(`${API_BASE_URL}/citas/${id}`).then(handle),
 
   // Crea una nueva cita en la base de datos.
   crear: (data: CitaInput) =>
-    apiFetch(`${BASE_URL}/citas`, {
+    apiFetch(`${API_BASE_URL}/citas`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -60,7 +60,7 @@ export const citasService = {
 
   // Actualiza todos los datos editables de una cita.
   editar: (id: number, data: CitaInput) =>
-    apiFetch(`${BASE_URL}/citas/${id}`, {
+    apiFetch(`${API_BASE_URL}/citas/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -68,7 +68,7 @@ export const citasService = {
 
   // Cambia solo el estado sin tocar el resto de la cita.
   cambiarEstado: (id: number, estado: string) =>
-    apiFetch(`${BASE_URL}/citas/${id}/estado`, {
+    apiFetch(`${API_BASE_URL}/citas/${id}/estado`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ estado }),
@@ -76,5 +76,5 @@ export const citasService = {
 
   // Elimina una cita por su identificador.
   eliminar: (id: number) =>
-    apiFetch(`${BASE_URL}/citas/${id}`, { method: "DELETE" }).then(handle),
+    apiFetch(`${API_BASE_URL}/citas/${id}`, { method: "DELETE" }).then(handle),
 };

@@ -1,12 +1,11 @@
-import axios from "axios";
-
-// URL base para las llamadas hechas con Axios.
-const API_URL = "http://localhost:3001/api";
+import { create } from "axios";
+import { API_BASE_URL } from "../config/api";
 
 // Cliente HTTP compartido: evita repetir URL, timeout y headers.
-const api = axios.create({
-  baseURL: API_URL,
-  timeout: 10000,
+const api = create({
+  baseURL: API_BASE_URL,
+  // Render Free puede tardar en despertar después de un periodo sin uso.
+  timeout: 75000,
   headers: {
     "Content-Type": "application/json",
   },

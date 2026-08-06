@@ -39,7 +39,7 @@ export default function CategoriasScreen() {
   );
 
   // Trae las categorias desde el backend y maneja el estado de carga.
-  const cargar = async () => {
+  async function cargar() {
     try {
       setCargando(true);
       setCategorias(await categoriasService.getAll());
@@ -89,7 +89,7 @@ export default function CategoriasScreen() {
   const eliminar = async (id: number) => {
     try {
       setEliminando(id);
-      const res = await categoriasService.eliminar(id);
+      await categoriasService.eliminar(id);
       setCategoriaAEliminar(null);
       await cargar();
     } catch (e: any) {
@@ -264,7 +264,7 @@ export default function CategoriasScreen() {
         >
           <Dialog.Title title="Eliminar categoría" />
           <Text style={styles.dialogText}>
-            ¿Eliminar "{categoriaAEliminar?.nombre}"?
+            ¿Eliminar &quot;{categoriaAEliminar?.nombre}&quot;?
           </Text>
           <Dialog.Actions>
             <Dialog.Button

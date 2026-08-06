@@ -1,7 +1,5 @@
+import { API_BASE_URL } from "../config/api";
 import { apiFetch } from "./apiFetch";
-
-const BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || "http://localhost:3001/api";
 
 // Usuario administrativo que puede operar el sistema.
 export interface Usuario {
@@ -81,18 +79,18 @@ export const usuariosService = {
   // Lista usuarios y permite buscar por texto.
   getAll: (buscar = "") =>
     apiFetch(
-      `${BASE_URL}/usuarios${buscar ? `?buscar=${encodeURIComponent(buscar)}` : ""}`,
+      `${API_BASE_URL}/usuarios${buscar ? `?buscar=${encodeURIComponent(buscar)}` : ""}`,
     ).then(handle),
 
   // Obtiene un usuario para editarlo.
-  getById: (id: number) => apiFetch(`${BASE_URL}/usuarios/${id}`).then(handle),
+  getById: (id: number) => apiFetch(`${API_BASE_URL}/usuarios/${id}`).then(handle),
 
   // Carga los roles disponibles para el formulario.
-  getRoles: () => apiFetch(`${BASE_URL}/usuarios/roles`).then(handle),
+  getRoles: () => apiFetch(`${API_BASE_URL}/usuarios/roles`).then(handle),
 
   // Crea un usuario nuevo.
   crear: (data: UsuarioInput) =>
-    apiFetch(`${BASE_URL}/usuarios`, {
+    apiFetch(`${API_BASE_URL}/usuarios`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -100,28 +98,28 @@ export const usuariosService = {
 
   // Valida credenciales contra el backend.
   login: (data: LoginInput) =>
-    apiFetch(`${BASE_URL}/usuarios/login`, {
+    apiFetch(`${API_BASE_URL}/usuarios/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then(handle),
 
   verificarOtp: (data: VerificarOtpInput) =>
-    apiFetch(`${BASE_URL}/usuarios/login/otp`, {
+    apiFetch(`${API_BASE_URL}/usuarios/login/otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then(handle),
 
   solicitarRecuperacion: (data: SolicitarRecuperacionInput) =>
-    apiFetch(`${BASE_URL}/usuarios/recuperacion/solicitar`, {
+    apiFetch(`${API_BASE_URL}/usuarios/recuperacion/solicitar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then(handle),
 
   confirmarRecuperacion: (data: ConfirmarRecuperacionInput) =>
-    apiFetch(`${BASE_URL}/usuarios/recuperacion/confirmar`, {
+    apiFetch(`${API_BASE_URL}/usuarios/recuperacion/confirmar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -129,7 +127,7 @@ export const usuariosService = {
 
   // Actualiza datos de un usuario existente.
   editar: (id: number, data: UsuarioInput) =>
-    apiFetch(`${BASE_URL}/usuarios/${id}`, {
+    apiFetch(`${API_BASE_URL}/usuarios/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -137,5 +135,5 @@ export const usuariosService = {
 
   // Elimina un usuario por id.
   eliminar: (id: number) =>
-    apiFetch(`${BASE_URL}/usuarios/${id}`, { method: "DELETE" }).then(handle),
+    apiFetch(`${API_BASE_URL}/usuarios/${id}`, { method: "DELETE" }).then(handle),
 };

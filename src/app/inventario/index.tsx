@@ -1,6 +1,6 @@
 import { Text } from "@rneui/themed";
-import { useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -37,7 +37,11 @@ export default function InventarioScreen() {
   // Carga productos y permite distinguir entre carga inicial y refresh.
   const cargar = useCallback(async (esRefresh = false) => {
     try {
-      esRefresh ? setRefrescando(true) : setCargando(true);
+      if (esRefresh) {
+        setRefrescando(true);
+      } else {
+        setCargando(true);
+      }
       const data = await inventarioService.getAll();
       setProductos(data);
     } catch (e: any) {
@@ -48,10 +52,12 @@ export default function InventarioScreen() {
     }
   }, []);
 
-  // Ejecuta la carga inicial al montar la pantalla.
-  useEffect(() => {
-    cargar();
-  }, [cargar]);
+  // Recarga cada vez que la pantalla obtiene el foco.
+  useFocusEffect(
+    useCallback(() => {
+      void cargar();
+    }, [cargar]),
+  );
 
   const productosFiltrados = productos.filter((p) => {
     if (filtro === "TODOS") return true;

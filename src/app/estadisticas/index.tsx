@@ -62,15 +62,8 @@ export default function EstadisticasScreen() {
     message: string;
   } | null>(null);
 
-  // Recarga las estadisticas cuando el usuario entra a esta pantalla.
-  useFocusEffect(
-    useCallback(() => {
-      cargarPagos();
-    }, []),
-  );
-
   // Trae todos los pagos desde la API para calcular las metricas.
-  const cargarPagos = async () => {
+  async function cargarPagos() {
     try {
       setCargando(true);
       const data = await pagosService.getAll();
@@ -81,6 +74,13 @@ export default function EstadisticasScreen() {
       setCargando(false);
     }
   };
+
+  // Recarga las estadisticas cuando el usuario entra a esta pantalla.
+  useFocusEffect(
+    useCallback(() => {
+      void cargarPagos();
+    }, []),
+  );
 
   // Agrupa los pagos por mes, metodo y tipo para evitar datos quemados.
   const stats = useMemo(() => {

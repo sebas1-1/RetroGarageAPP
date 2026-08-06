@@ -1,3 +1,5 @@
+import { SIMULATIONS_API_BASE_URL } from "../config/api";
+
 export interface OfertaRepuesto {
   id_repuesto: number;
   proveedor: string;
@@ -9,9 +11,6 @@ export interface OfertaRepuesto {
   tiempo_entrega_dias: number;
 }
 
-const SOCIOS_API_URL =
-  process.env.EXPO_PUBLIC_SOCIOS_API_URL ?? "http://127.0.0.1:8000";
-
 export const proveedoresService = {
   buscar: async (termino: string): Promise<OfertaRepuesto[]> => {
     const terminoLimpio = termino.trim();
@@ -21,7 +20,7 @@ export const proveedoresService = {
     }
 
     const respuesta = await fetch(
-      `${SOCIOS_API_URL}/socios/proveedores/repuestos?buscar=${encodeURIComponent(
+      `${SIMULATIONS_API_BASE_URL}/socios/proveedores/repuestos?buscar=${encodeURIComponent(
         terminoLimpio,
       )}`,
     );
@@ -45,7 +44,7 @@ export const proveedoresService = {
     }
 
     const respuesta = await fetch(
-      `${SOCIOS_API_URL}/socios/proveedores/repuestos/${encodeURIComponent(
+      `${SIMULATIONS_API_BASE_URL}/socios/proveedores/repuestos/${encodeURIComponent(
         codigoLimpio,
       )}`,
     );

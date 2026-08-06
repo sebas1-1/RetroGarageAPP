@@ -35,7 +35,7 @@ export default function UsuariosScreen() {
   );
 
   // Consulta usuarios desde la API usando el filtro de busqueda.
-  const cargarUsuarios = async (texto = "") => {
+  async function cargarUsuarios(texto = "") {
     try {
       setCargando(true);
       setUsuarios(await usuariosService.getAll(texto));

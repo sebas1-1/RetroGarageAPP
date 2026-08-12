@@ -34,12 +34,27 @@ interface MetodoResumen {
   color: string;
 }
 
-// Nombres cortos usados en la grafica de ingresos.
-const MONTHS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun"];
-
 // Obtiene la fecha real del pago aunque venga como fecha_pago o fecha.
 const getPagoDate = (pago: PagoEstadistica) =>
   new Date(pago.fecha_pago ?? pago.fecha ?? "");
+
+const startOfMonth = (date: Date) =>
+  new Date(date.getFullYear(), date.getMonth(), 1);
+
+const capitalize = (value: string) =>
+  value.charAt(0).toUpperCase() + value.slice(1);
+
+const formatMonth = (date: Date) =>
+  capitalize(
+    date.toLocaleDateString("es-CR", { month: "long", year: "numeric" }),
+  );
+
+const formatShortMonth = (date: Date) =>
+  capitalize(
+    date
+      .toLocaleDateString("es-CR", { month: "short", year: "2-digit" })
+      .replace(".", ""),
+  );
 
 // Formatea montos grandes para que entren mejor en las tarjetas.
 const formatMoney = (value: number) => {
@@ -58,13 +73,16 @@ export default function EstadisticasScreen() {
   // Estados para los pagos, el loader y los mensajes de error.
   const [pagos, setPagos] = useState<PagoEstadistica[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState(() =>
+    startOfMonth(new Date()),
+  );
   const [messageDialog, setMessageDialog] = useState<{
     title: string;
     message: string;
   } | null>(null);
 
   // Trae todos los pagos desde la API para calcular las metricas.
-  async function cargarPagos() {
+  const cargarPagos = useCallback(async () => {
     try {
       setCargando(true);
       const data = await pagosService.getAll();
@@ -74,23 +92,42 @@ export default function EstadisticasScreen() {
     } finally {
       setCargando(false);
     }
-  };
+  }, []);
 
   // Recarga las estadisticas cuando el usuario entra a esta pantalla.
   useFocusEffect(
     useCallback(() => {
       void cargarPagos();
-    }, []),
+    }, [cargarPagos]),
   );
+
+  const currentMonth = startOfMonth(new Date());
+  const isCurrentMonth = sameMonth(selectedMonth, currentMonth);
+  const selectedMonthLabel = formatMonth(selectedMonth);
+
+  const changeMonth = (offset: number) => {
+    setSelectedMonth((current) => {
+      const candidate = new Date(
+        current.getFullYear(),
+        current.getMonth() + offset,
+        1,
+      );
+
+      return candidate > currentMonth ? current : candidate;
+    });
+  };
 
   // Agrupa los pagos por mes, metodo y tipo para evitar datos quemados.
   const stats = useMemo(() => {
     const methodColors = [Colors.primary, Colors.accent, Colors.warning];
-    const now = new Date();
-    const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    // Filtra pagos del mes actual y del mes anterior para comparar rendimiento.
+    const previousMonth = new Date(
+      selectedMonth.getFullYear(),
+      selectedMonth.getMonth() - 1,
+      1,
+    );
+    // Filtra pagos del mes elegido y del mes anterior para comparar rendimiento.
     const currentPayments = pagos.filter((pago) =>
-      sameMonth(getPagoDate(pago), now),
+      sameMonth(getPagoDate(pago), selectedMonth),
     );
     const previousPayments = pagos.filter((pago) =>
       sameMonth(getPagoDate(pago), previousMonth),
@@ -108,15 +145,25 @@ export default function EstadisticasScreen() {
     const growth =
       previousTotal > 0
         ? Math.round(((currentTotal - previousTotal) / previousTotal) * 100)
-        : 0;
+        : currentTotal > 0
+          ? 100
+          : 0;
 
-    // Prepara las barras de ingresos de los ultimos seis meses.
+    // Prepara seis meses y termina en el periodo seleccionado.
     const byMonth = Array.from({ length: 6 }, (_, index) => {
-      const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+      const date = new Date(
+        selectedMonth.getFullYear(),
+        selectedMonth.getMonth() - (5 - index),
+        1,
+      );
       const total = pagos
         .filter((pago) => sameMonth(getPagoDate(pago), date))
         .reduce((sum, pago) => sum + pago.monto, 0);
-      return { label: MONTHS[date.getMonth()], total };
+      return {
+        key: `${date.getFullYear()}-${date.getMonth()}`,
+        label: formatShortMonth(date),
+        total,
+      };
     });
 
     const maxMonth = Math.max(...byMonth.map((month) => month.total), 1);
@@ -145,6 +192,7 @@ export default function EstadisticasScreen() {
 
     return {
       currentTotal,
+      previousTotal,
       growth,
       paymentsCount: currentPayments.length,
       paidAppointments: currentPayments.filter((pago) => pago.tipo === "cita")
@@ -156,7 +204,7 @@ export default function EstadisticasScreen() {
       maxMonth,
       methods,
     };
-  }, [Colors, pagos]);
+  }, [Colors, pagos, selectedMonth]);
 
   if (cargando) {
     return (
@@ -179,17 +227,66 @@ export default function EstadisticasScreen() {
       >
         <View style={styles.titleRow}>
           <View>
-            <Text style={styles.title}>Estadisticas</Text>
+            <Text style={styles.title}>Estadísticas</Text>
             <Text style={styles.subtitle}>Rendimiento del negocio</Text>
           </View>
-          <TouchableOpacity style={styles.periodButton} activeOpacity={0.75}>
-            <Text style={styles.periodText}>Este mes</Text>
-            <MaterialIcons
-              name="expand-more"
-              size={18}
-              color={Colors.primary}
-            />
-          </TouchableOpacity>
+          <View style={styles.periodPanel}>
+            <View style={styles.periodNavigator}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Consultar mes anterior"
+                style={styles.periodArrowButton}
+                activeOpacity={0.75}
+                onPress={() => changeMonth(-1)}
+              >
+                <MaterialIcons
+                  name="chevron-left"
+                  size={24}
+                  color={Colors.primary}
+                />
+              </TouchableOpacity>
+              <Text
+                accessibilityLiveRegion="polite"
+                style={styles.periodText}
+              >
+                {selectedMonthLabel}
+              </Text>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Consultar mes siguiente"
+                accessibilityState={{ disabled: isCurrentMonth }}
+                disabled={isCurrentMonth}
+                style={[
+                  styles.periodArrowButton,
+                  isCurrentMonth && styles.periodArrowDisabled,
+                ]}
+                activeOpacity={0.75}
+                onPress={() => changeMonth(1)}
+              >
+                <MaterialIcons
+                  name="chevron-right"
+                  size={24}
+                  color={Colors.primary}
+                />
+              </TouchableOpacity>
+            </View>
+            {!isCurrentMonth ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Volver a las estadísticas del mes actual"
+                style={styles.currentMonthButton}
+                activeOpacity={0.75}
+                onPress={() => setSelectedMonth(currentMonth)}
+              >
+                <MaterialIcons
+                  name="today"
+                  size={15}
+                  color={Colors.secondary}
+                />
+                <Text style={styles.currentMonthText}>VOLVER AL MES ACTUAL</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
         </View>
 
         {/* Tarjetas superiores con los numeros principales del mes. */}
@@ -197,7 +294,11 @@ export default function EstadisticasScreen() {
           <MetricCard
             label="INGRESOS"
             value={formatMoney(stats.currentTotal)}
-            helper={`${stats.growth >= 0 ? "+" : ""}${stats.growth}% vs mes anterior`}
+            helper={
+              stats.previousTotal > 0
+                ? `${stats.growth >= 0 ? "+" : ""}${stats.growth}% vs mes anterior`
+                : "Sin base de comparación"
+            }
             positive={stats.growth >= 0}
           />
           <MetricCard
@@ -225,7 +326,7 @@ export default function EstadisticasScreen() {
           <SectionTitle>INGRESOS POR MES</SectionTitle>
           <View style={styles.chart}>
             {stats.byMonth.map((item, index) => (
-              <View key={`${item.label}-${index}`} style={styles.barItem}>
+              <View key={item.key} style={styles.barItem}>
                 <Text style={styles.barValue}>{formatMoney(item.total)}</Text>
                 <View
                   style={[
@@ -253,10 +354,10 @@ export default function EstadisticasScreen() {
 
         {/* Desglose de ingresos segun el metodo de pago usado. */}
         <View style={styles.card}>
-          <SectionTitle>METODOS DE PAGO</SectionTitle>
+          <SectionTitle>MÉTODOS DE PAGO</SectionTitle>
           {stats.methods.length === 0 ? (
             <Text style={styles.emptyText}>
-              No hay pagos registrados este mes
+              No hay pagos registrados en {selectedMonthLabel.toLowerCase()}
             </Text>
           ) : (
             stats.methods.map((method) => (
@@ -271,11 +372,19 @@ export default function EstadisticasScreen() {
             <MaterialIcons name="insights" size={11} color={Colors.warning} />
             <Text style={styles.summaryBadgeText}>RESUMEN</Text>
           </View>
-          <Text style={styles.summaryTitle}>Resumen del mes</Text>
-          <Insight>
-            Los ingresos {stats.growth >= 0 ? "subieron" : "bajaron"}{" "}
-            {Math.abs(stats.growth)}% respecto al mes anterior.
-          </Insight>
+          <Text style={styles.summaryTitle}>Resumen de {selectedMonthLabel}</Text>
+          {stats.previousTotal > 0 ? (
+            <Insight>
+              Los ingresos {stats.growth >= 0 ? "subieron" : "bajaron"}{" "}
+              {Math.abs(stats.growth)}% respecto al mes anterior.
+            </Insight>
+          ) : (
+            <Insight>
+              {stats.currentTotal > 0
+                ? "El mes anterior no registró ingresos para realizar una comparación."
+                : "Este mes y el anterior no registran ingresos."}
+            </Insight>
+          )}
           <Insight>
             El ticket promedio es de {formatMoney(stats.ticket)} por pago
             registrado.
@@ -283,9 +392,15 @@ export default function EstadisticasScreen() {
           <Insight>
             {stats.methods[0]
               ? `${stats.methods[0].nombre} concentra el ${stats.methods[0].porcentaje}% de los ingresos del mes.`
-              : "Aun no hay metodos de pago para analizar este mes."}
+              : "Aún no hay métodos de pago para analizar este mes."}
           </Insight>
-          <TouchableOpacity style={styles.analysisButton} activeOpacity={0.75}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Actualizar estadísticas"
+            style={styles.analysisButton}
+            activeOpacity={0.75}
+            onPress={() => void cargarPagos()}
+          >
             <MaterialIcons name="refresh" size={14} color={Colors.accentLight} />
             <Text style={styles.analysisButtonText}>ACTUALIZAR RESUMEN</Text>
           </TouchableOpacity>
@@ -393,8 +508,10 @@ const createStyles = (Colors: AppColors) => StyleSheet.create({
   },
   titleRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     alignItems: "flex-start",
+    gap: sp(14),
     marginBottom: sp(22),
   },
   title: {
@@ -407,22 +524,49 @@ const createStyles = (Colors: AppColors) => StyleSheet.create({
     fontSize: fs(13),
     marginTop: sp(2),
   },
-  periodButton: {
-    minWidth: sp(88),
-    height: sp(32),
-    borderRadius: sp(8),
+  periodPanel: {
+    alignItems: "flex-end",
+    gap: sp(7),
+  },
+  periodNavigator: {
+    minHeight: sp(44),
+    borderRadius: sp(12),
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.borderStrong,
     backgroundColor: Colors.white,
-    paddingHorizontal: sp(10),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
+  periodArrowButton: {
+    width: sp(44),
+    height: sp(44),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  periodArrowDisabled: {
+    opacity: 0.35,
+  },
   periodText: {
+    minWidth: sp(128),
+    textAlign: "center",
     color: Colors.primary,
     fontSize: fs(12),
-    fontWeight: "500",
+    fontWeight: "700",
+  },
+  currentMonthButton: {
+    minHeight: sp(34),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: sp(5),
+    paddingHorizontal: sp(8),
+  },
+  currentMonthText: {
+    color: Colors.secondary,
+    fontSize: fs(9),
+    fontWeight: "800",
+    letterSpacing: 0.7,
   },
   metricGrid: {
     flexDirection: "row",

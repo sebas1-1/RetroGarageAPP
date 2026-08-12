@@ -1,5 +1,5 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Input, Text } from "@rneui/themed";
+import { Dialog, Input, Text } from "@rneui/themed";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -16,6 +16,10 @@ import { MessageDialog } from "../../components/shared/MessageDialog";
 import { Colors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Auto, autosService } from "../../services/autosService";
+import {
+  CitaDraft,
+  citaDraftService,
+} from "../../services/citaDraftService";
 import { citasService } from "../../services/citasService";
 import { Cliente, clientesService } from "../../services/clientesService";
 import { serviciosService } from "../../services/serviciosService";
@@ -26,6 +30,18 @@ interface Servicio {
   precio_base: number;
 }
 
+const INITIAL_FORM = {
+  id_cliente: "",
+  id_servicio: "",
+  marca_vehiculo: "",
+  modelo_vehiculo: "",
+  anio_vehiculo: "",
+  fecha: "",
+  hora: "",
+  descripcion: "",
+  estado: "PENDIENTE",
+};
+
 // Pantalla para registrar una cita nueva en la agenda del taller.
 export default function NuevaCitaScreen() {
   const router = useRouter();
@@ -35,17 +51,7 @@ export default function NuevaCitaScreen() {
   const [autosCliente, setAutosCliente] = useState<Auto[]>([]);
   const [cargandoAutos, setCargandoAutos] = useState(false);
   const [cargando, setCargando] = useState(true);
-  const [form, setForm] = useState({
-    id_cliente: "",
-    id_servicio: "",
-    marca_vehiculo: "",
-    modelo_vehiculo: "",
-    anio_vehiculo: "",
-    fecha: "",
-    hora: "",
-    descripcion: "",
-    estado: "PENDIENTE",
-  });
+  const [form, setForm] = useState({ ...INITIAL_FORM });
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [buscarCliente, setBuscarCliente] = useState("");
   const [messageDialog, setMessageDialog] = useState<{
@@ -53,6 +59,17 @@ export default function NuevaCitaScreen() {
     message: string;
     onClose?: () => void;
   } | null>(null);
+  const [confirmarSalidaVisible, setConfirmarSalidaVisible] = useState(false);
+  const [citaGuardada, setCitaGuardada] = useState(false);
+  const [borradorInicializado, setBorradorInicializado] = useState(false);
+  const [borradorPendiente, setBorradorPendiente] =
+    useState<CitaDraft | null>(null);
+
+  const tieneCambiosSinGuardar = Object.keys(INITIAL_FORM).some(
+    (key) =>
+      form[key as keyof typeof form] !==
+      INITIAL_FORM[key as keyof typeof INITIAL_FORM],
+  );
 
   const closeMessageDialog = () => {
     const onClose = messageDialog?.onClose;
@@ -80,6 +97,24 @@ export default function NuevaCitaScreen() {
     }
   };
 
+  // Evita perder accidentalmente la informacion escrita en el formulario.
+  const solicitarSalida = () => {
+    if (guardando) return;
+    if (tieneCambiosSinGuardar) {
+      setConfirmarSalidaVisible(true);
+      return;
+    }
+    router.back();
+  };
+
+  const salirSinGuardar = async () => {
+    setConfirmarSalidaVisible(false);
+    if (tieneCambiosSinGuardar) {
+      await citaDraftService.save(form);
+    }
+    router.back();
+  };
+
   // Al abrir la pantalla se cargan clientes y servicios disponibles.
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -87,6 +122,52 @@ export default function NuevaCitaScreen() {
     }, 0);
     return () => clearTimeout(timeoutId);
   }, []);
+
+  // Consulta una sola vez si existe una cita pendiente en este dispositivo.
+  useEffect(() => {
+    let activo = true;
+    const timeoutId = setTimeout(() => {
+      void citaDraftService.get().then((draft) => {
+        if (!activo) return;
+        setBorradorPendiente(draft);
+        setBorradorInicializado(true);
+      });
+    }, 0);
+
+    return () => {
+      activo = false;
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
+  // Guarda los cambios con una pausa breve para no escribir por cada tecla.
+  useEffect(() => {
+    if (
+      !borradorInicializado ||
+      borradorPendiente ||
+      guardando ||
+      citaGuardada
+    ) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      if (tieneCambiosSinGuardar) {
+        void citaDraftService.save(form);
+      } else {
+        void citaDraftService.remove();
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    borradorInicializado,
+    borradorPendiente,
+    citaGuardada,
+    form,
+    guardando,
+    tieneCambiosSinGuardar,
+  ]);
 
   const set = (key: string) => (val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
@@ -103,6 +184,28 @@ export default function NuevaCitaScreen() {
     } finally {
       setCargandoAutos(false);
     }
+  };
+
+  const recuperarBorrador = () => {
+    if (!borradorPendiente) return;
+
+    const draft = borradorPendiente;
+    setForm(draft);
+    setErrores({});
+    setBorradorPendiente(null);
+
+    const cliente = clientes.find(
+      (item) => String(item.id_cliente) === draft.id_cliente,
+    );
+    if (cliente) void cargarAutosCliente(cliente);
+  };
+
+  const descartarBorrador = async () => {
+    await citaDraftService.remove();
+    setForm({ ...INITIAL_FORM });
+    setErrores({});
+    setAutosCliente([]);
+    setBorradorPendiente(null);
   };
 
   const seleccionarCliente = (cliente: Cliente) => {
@@ -183,6 +286,8 @@ export default function NuevaCitaScreen() {
         descripcion: form.descripcion || null,
         estado: form.estado,
       });
+      setCitaGuardada(true);
+      await citaDraftService.remove();
       setMessageDialog({
         title: "Listo",
         message: "Cita registrada correctamente",
@@ -228,7 +333,8 @@ export default function NuevaCitaScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.menuBtn}
-            onPress={() => router.back()}
+            onPress={solicitarSalida}
+            disabled={guardando}
           >
             <Text style={styles.menuIcon}>←</Text>
           </TouchableOpacity>
@@ -507,7 +613,8 @@ export default function NuevaCitaScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.fabBtn, styles.fabCancelar]}
-              onPress={() => router.back()}
+              onPress={solicitarSalida}
+              disabled={guardando}
             >
               <MaterialIcons name="close" size={28} color="white" />
             </TouchableOpacity>
@@ -522,6 +629,40 @@ export default function NuevaCitaScreen() {
           message={messageDialog?.message ?? ""}
           onClose={closeMessageDialog}
         />
+
+        <Dialog
+          isVisible={confirmarSalidaVisible}
+          onBackdropPress={() => setConfirmarSalidaVisible(false)}
+        >
+          <Dialog.Title title="Cambios sin guardar" />
+          <Text style={styles.confirmMessage}>
+            Tienes información que aún no has guardado. ¿Deseas salir?
+          </Text>
+          <Dialog.Actions>
+            <Dialog.Button
+              title="SALIR SIN GUARDAR"
+              onPress={salirSinGuardar}
+            />
+            <Dialog.Button
+              title="CONTINUAR EDITANDO"
+              onPress={() => setConfirmarSalidaVisible(false)}
+            />
+          </Dialog.Actions>
+        </Dialog>
+
+        <Dialog
+          isVisible={borradorPendiente !== null}
+          onBackdropPress={() => undefined}
+        >
+          <Dialog.Title title="Borrador encontrado" />
+          <Text style={styles.confirmMessage}>
+            Encontramos una cita que no terminaste. ¿Deseas continuar?
+          </Text>
+          <Dialog.Actions>
+            <Dialog.Button title="DESCARTAR" onPress={descartarBorrador} />
+            <Dialog.Button title="RECUPERAR" onPress={recuperarBorrador} />
+          </Dialog.Actions>
+        </Dialog>
       </View>
     </KeyboardAvoidingView>
   );
@@ -531,6 +672,11 @@ export default function NuevaCitaScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+  confirmMessage: {
+    marginBottom: sp(20),
+    color: Colors.primary,
+    lineHeight: fs(20),
+  },
   header: {
     backgroundColor: Colors.primary,
     flexDirection: "row",

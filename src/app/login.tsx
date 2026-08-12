@@ -1332,13 +1332,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerTitle: {
-    color: "#FFFFFF",
+    color: Colors.white,
     fontSize: fs(22),
     fontWeight: "700",
     letterSpacing: 6,
   },
   headerSub: {
-    color: "#B8B4D4",
+    color: Colors.accentSoft,
     fontSize: fs(11),
     letterSpacing: 4,
     marginTop: sp(6),
@@ -1347,7 +1347,7 @@ const styles = StyleSheet.create({
     marginTop: sp(20),
     width: sp(32),
     height: 1.5,
-    backgroundColor: "#5c5878",
+    backgroundColor: Colors.accent,
   },
   body: {
     flex: 1,
@@ -1367,11 +1367,11 @@ const styles = StyleSheet.create({
     marginBottom: sp(20),
   },
   loginBlockNotice: {
-    backgroundColor: "#FFF3E8",
-    borderColor: "#D9742F",
+    backgroundColor: Colors.accentSoft,
+    borderColor: Colors.accent,
     borderRadius: sp(10),
     borderWidth: 1,
-    color: "#993C1D",
+    color: Colors.danger,
     fontSize: fs(12),
     fontWeight: "600",
     marginBottom: sp(16),
@@ -1394,7 +1394,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modeBtnActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.secondary,
   },
   modeText: {
     color: Colors.gray,
@@ -1403,7 +1403,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   modeTextActive: {
-    color: Colors.cream,
+    color: Colors.white,
   },
   sectionLabel: {
     fontSize: fs(11),
@@ -1419,14 +1419,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: sp(10),
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.borderStrong,
     paddingHorizontal: sp(16),
     paddingVertical: sp(14),
     fontSize: fs(15),
     color: Colors.primary,
   },
   inputFocused: {
-    borderColor: Colors.primary,
+    borderColor: Colors.secondary,
   },
   passwordRules: {
     backgroundColor: Colors.white,
@@ -1444,15 +1444,15 @@ const styles = StyleSheet.create({
     marginBottom: sp(8),
   },
   passwordRule: {
-    color: "#993C1D",
+    color: Colors.danger,
     fontSize: fs(12),
     marginBottom: sp(4),
   },
   passwordRuleValid: {
-    color: "#0F6E56",
+    color: Colors.success,
   },
   passwordMatch: {
-    color: "#993C1D",
+    color: Colors.danger,
     fontSize: fs(12),
     marginTop: sp(6),
     marginLeft: sp(4),
@@ -1479,8 +1479,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   otpMethodBtnActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.secondary,
+    borderColor: Colors.secondary,
   },
   otpMethodText: {
     fontSize: fs(11),
@@ -1489,7 +1489,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   otpMethodTextActive: {
-    color: Colors.cream,
+    color: Colors.white,
   },
   otpText: {
     color: Colors.primary,
@@ -1538,7 +1538,7 @@ const styles = StyleSheet.create({
     marginTop: sp(4),
   },
   retroOtpMissing: {
-    color: "#993C1D",
+    color: Colors.danger,
     fontSize: fs(12),
     textAlign: "center",
   },
@@ -1552,12 +1552,12 @@ const styles = StyleSheet.create({
   },
   retroPinButton: {
     alignItems: "center",
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     borderRadius: sp(8),
     paddingVertical: sp(11),
   },
   retroPinButtonText: {
-    color: Colors.cream,
+    color: Colors.white,
     fontSize: fs(11),
     fontWeight: "700",
     letterSpacing: 1.5,
@@ -1569,18 +1569,23 @@ const styles = StyleSheet.create({
     marginBottom: sp(8),
   },
   boton: {
-    backgroundColor: Colors.primary,
-    borderRadius: sp(10),
+    backgroundColor: Colors.accent,
+    borderRadius: sp(12),
     paddingVertical: sp(16),
     alignItems: "center",
     marginTop: sp(32),
     marginBottom: sp(20),
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 3,
   },
   botonDisabled: {
     opacity: 0.75,
   },
   botonTexto: {
-    color: Colors.cream,
+    color: Colors.white,
     fontSize: fs(13),
     fontWeight: "700",
     letterSpacing: 3,

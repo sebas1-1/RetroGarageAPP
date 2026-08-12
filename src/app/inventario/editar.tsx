@@ -171,9 +171,9 @@ export default function EditarProductoScreen() {
     const actual = Number(form.stock_actual);
     const minimo = Number(form.stock_minimo);
     if (!form.stock_actual) return Colors.gray;
-    if (actual <= 0) return "#C62828";
-    if (actual <= minimo) return "#E65100";
-    return "#2E7D32";
+    if (actual <= 0) return Colors.danger;
+    if (actual <= minimo) return Colors.warning;
+    return Colors.success;
   };
 
   const estadoLabel = () => {
@@ -424,7 +424,7 @@ export default function EditarProductoScreen() {
 
           {/* Marcar agotado */}
           <TouchableOpacity style={styles.agotadoBtn} onPress={marcarAgotado}>
-            <MaterialIcons name="delete-outline" size={18} color="#C62828" />
+            <MaterialIcons name="delete-outline" size={18} color={Colors.danger} />
             <Text style={styles.agotadoBtnText}>Marcar como agotado</Text>
           </TouchableOpacity>
 
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
   menuBtn: { width: sp(40) },
   menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: "#FFFFFF",
+    color: Colors.white,
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
     marginBottom: sp(2),
     marginLeft: sp(10),
   },
-  req: { color: "#993C1D" },
+  req: { color: Colors.danger },
   row: { flexDirection: "row", gap: sp(8) },
   selectWrapper: { marginBottom: sp(8), marginLeft: sp(10) },
   selectChip: {
@@ -502,8 +502,8 @@ const styles = StyleSheet.create({
     marginRight: sp(6),
   },
   selectChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.secondary,
+    borderColor: Colors.secondary,
   },
   selectChipText: {
     fontSize: fs(12),
@@ -527,8 +527,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   rolBtnActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.secondary,
+    borderColor: Colors.secondary,
   },
   rolBtnText: { fontSize: fs(13), color: Colors.primary, fontWeight: "500" },
   rolBtnTextActive: { color: Colors.cream },
@@ -553,17 +553,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   estadoBadgeText: { fontSize: fs(11), fontWeight: "600", letterSpacing: 0.5 },
-  errorText: { fontSize: fs(12), color: "#993C1D", marginTop: sp(4) },
+  errorText: { fontSize: fs(12), color: Colors.danger, marginTop: sp(4) },
   inputContainer: {
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: sp(6),
+    borderColor: Colors.borderStrong,
+    borderRadius: sp(10),
     paddingHorizontal: sp(10),
     backgroundColor: Colors.white,
   },
   inputContainerError: {
     borderWidth: 1,
-    borderColor: "#993C1D",
+    borderColor: Colors.danger,
     borderRadius: sp(6),
     paddingHorizontal: sp(10),
     backgroundColor: Colors.white,
@@ -585,16 +585,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 3,
   },
-  fabGuardar: { backgroundColor: "#0F6E56" },
-  fabCancelar: { backgroundColor: "#C62828" },
-  fabDisabled: { backgroundColor: "#888" },
+  fabGuardar: { backgroundColor: Colors.accent },
+  fabCancelar: { backgroundColor: Colors.danger },
+  fabDisabled: { backgroundColor: Colors.disabled },
   agotadoBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: sp(6),
     borderWidth: 1,
-    borderColor: "#C62828",
+    borderColor: Colors.danger,
     borderRadius: sp(8),
     paddingVertical: sp(12),
     marginHorizontal: sp(20),
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
   },
   agotadoBtnText: {
     fontSize: fs(13),
-    color: "#C62828",
+    color: Colors.danger,
     fontWeight: "600",
   },
   footer: {

@@ -58,16 +58,16 @@ export function SelectField({ value, options, placeholder, onChange, disabled, l
 }
 
 const styles = StyleSheet.create({
-  field: { minHeight: sp(48), flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: Colors.border, borderRadius: sp(6), paddingHorizontal: sp(12), backgroundColor: Colors.white, marginBottom: sp(12) },
-  errorBorder: { borderColor: "#993C1D" },
+  field: { minHeight: sp(48), flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: Colors.borderStrong, borderRadius: sp(10), paddingHorizontal: sp(12), backgroundColor: Colors.white, marginBottom: sp(12) },
+  errorBorder: { borderColor: Colors.danger },
   disabled: { opacity: 0.55 },
   value: { flex: 1, fontSize: fs(14), color: Colors.primary },
   placeholder: { color: Colors.gray },
-  error: { color: "#993C1D", fontSize: fs(12), marginTop: sp(-8), marginLeft: sp(10), marginBottom: sp(10) },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: sp(24) },
-  modal: { maxHeight: "70%", backgroundColor: Colors.white, borderRadius: sp(10), padding: sp(16) },
+  error: { color: Colors.danger, fontSize: fs(12), marginTop: sp(-8), marginLeft: sp(10), marginBottom: sp(10) },
+  overlay: { flex: 1, backgroundColor: Colors.overlay, justifyContent: "center", padding: sp(24) },
+  modal: { maxHeight: "70%", backgroundColor: Colors.white, borderRadius: sp(14), padding: sp(16) },
   title: { fontSize: fs(17), fontWeight: "600", color: Colors.primary, marginBottom: sp(10) },
   option: { paddingVertical: sp(14), paddingHorizontal: sp(10), borderBottomWidth: 1, borderBottomColor: Colors.border },
-  optionSelected: { backgroundColor: Colors.cream },
+  optionSelected: { backgroundColor: Colors.secondarySoft },
   optionText: { fontSize: fs(15), color: Colors.primary },
 });

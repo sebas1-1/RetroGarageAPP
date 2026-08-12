@@ -309,8 +309,8 @@ const styles = StyleSheet.create({
     paddingVertical: sp(8),
   },
   chipActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary,
+    borderColor: Colors.secondary,
+    backgroundColor: Colors.secondary,
   },
   chipText: { color: Colors.primary, fontSize: fs(12), fontWeight: "600" },
   chipTextActive: { color: Colors.cream },
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: sp(8),
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     borderRadius: sp(7),
     paddingVertical: sp(12),
     marginTop: sp(16),
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   },
   company: { color: Colors.gray, fontSize: fs(11), marginTop: sp(2) },
   categoryBadge: {
-    backgroundColor: "#E8F0FE",
+    backgroundColor: Colors.infoSoft,
     borderRadius: sp(5),
     paddingHorizontal: sp(8),
     paddingVertical: sp(4),
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
   },
   priceLabel: { color: Colors.gray, fontSize: fs(8), fontWeight: "600" },
   dailyPrice: {
-    color: "#0F6E56",
+    color: Colors.success,
     fontSize: fs(16),
     fontWeight: "700",
     marginTop: sp(2),

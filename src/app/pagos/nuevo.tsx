@@ -1122,7 +1122,7 @@ const styles = StyleSheet.create({
   backBtn: { width: sp(40) },
   backIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: "#FFFFFF",
+    color: Colors.white,
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,
@@ -1149,8 +1149,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   stepCircleActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary,
+    borderColor: Colors.secondary,
+    backgroundColor: Colors.secondary,
   },
   stepNum: { fontSize: fs(12), fontWeight: "600", color: Colors.gray },
   stepNumActive: { color: Colors.cream },
@@ -1193,15 +1193,15 @@ const styles = StyleSheet.create({
     marginBottom: sp(2),
     marginLeft: sp(10),
   },
-  req: { color: "#993C1D" },
+  req: { color: Colors.danger },
   inputContainer: {
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: sp(6),
+    borderColor: Colors.borderStrong,
+    borderRadius: sp(10),
     paddingHorizontal: sp(10),
     backgroundColor: Colors.white,
   },
-  inputContainerError: { borderColor: "#993C1D" },
+  inputContainerError: { borderColor: Colors.danger },
   inputText: { fontSize: fs(14), color: Colors.primary },
   inputWrapper: { paddingHorizontal: 0, marginBottom: sp(8) },
   tipoCard: {
@@ -1215,8 +1215,8 @@ const styles = StyleSheet.create({
     marginBottom: sp(12),
   },
   tipoCardActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.secondary,
+    borderColor: Colors.secondary,
   },
   tipoIconBox: {
     width: sp(48),
@@ -1278,7 +1278,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cambiarCitaBtn: { alignItems: "center", paddingTop: sp(10) },
-  cambiarCitaText: { fontSize: fs(12), color: "#993C1D", fontWeight: "600" },
+  cambiarCitaText: { fontSize: fs(12), color: Colors.danger, fontWeight: "600" },
   productosList: {
     backgroundColor: Colors.white,
     borderRadius: sp(8),
@@ -1303,7 +1303,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   productoItemSub: { fontSize: fs(11), color: Colors.gray, marginTop: sp(2) },
-  productoItemPrecio: { fontSize: fs(13), fontWeight: "600", color: "#0F6E56" },
+  productoItemPrecio: { fontSize: fs(13), fontWeight: "600", color: Colors.success },
   sinResultados: {
     textAlign: "center",
     color: Colors.gray,
@@ -1343,7 +1343,7 @@ const styles = StyleSheet.create({
   carritoItemPrecio: { fontSize: fs(11), color: Colors.gray, marginTop: sp(2) },
   carritoItemStock: {
     fontSize: fs(10),
-    color: "#0F6E56",
+    color: Colors.success,
     fontWeight: "600",
     marginTop: sp(2),
   },
@@ -1374,7 +1374,7 @@ const styles = StyleSheet.create({
   carritoItemTotal: {
     fontSize: fs(13),
     fontWeight: "600",
-    color: "#0F6E56",
+    color: Colors.success,
     minWidth: sp(70),
     textAlign: "right",
   },
@@ -1417,8 +1417,8 @@ const styles = StyleSheet.create({
     marginRight: sp(10),
   },
   metodoCardActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.secondary,
+    borderColor: Colors.secondary,
   },
   metodoLabel: {
     fontSize: fs(11),
@@ -1432,7 +1432,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: sp(6),
     right: sp(6),
-    backgroundColor: "#0F6E56",
+    backgroundColor: Colors.success,
     borderRadius: sp(10),
     width: sp(18),
     height: sp(18),
@@ -1453,7 +1453,7 @@ const styles = StyleSheet.create({
     marginTop: sp(-8),
   },
   visaBadge: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.white,
     borderColor: "#1A1F71",
     borderWidth: 1,
     borderRadius: sp(5),
@@ -1496,8 +1496,8 @@ const styles = StyleSheet.create({
   paypalInfo: {
     flexDirection: "row",
     alignItems: "flex-start",
-    backgroundColor: "#F4F7FB",
-    borderColor: "#B7C9E2",
+    backgroundColor: Colors.cream,
+    borderColor: Colors.infoSoft,
     borderWidth: 1,
     borderRadius: sp(8),
     padding: sp(14),
@@ -1582,14 +1582,14 @@ const styles = StyleSheet.create({
     flex: 2,
     paddingVertical: sp(14),
     borderRadius: sp(8),
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     alignItems: "center",
   },
   navBtnDisabled: { backgroundColor: Colors.gray },
   navBtnPrimarioText: {
     fontSize: fs(14),
     fontWeight: "600",
-    color: Colors.cream,
+    color: Colors.white,
   },
   registrarBtnInner: {
     flexDirection: "row",

@@ -284,7 +284,7 @@ export default function EstadisticasScreen() {
               : "Aun no hay metodos de pago para analizar este mes."}
           </Insight>
           <TouchableOpacity style={styles.analysisButton} activeOpacity={0.75}>
-            <MaterialIcons name="refresh" size={14} color={Colors.accent} />
+            <MaterialIcons name="refresh" size={14} color={Colors.accentLight} />
             <Text style={styles.analysisButtonText}>ACTUALIZAR RESUMEN</Text>
           </TouchableOpacity>
         </View>
@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
   },
   insightText: {
     flex: 1,
-    color: "#FFFFFF",
+    color: Colors.white,
     fontSize: fs(12),
     lineHeight: fs(18),
   },
@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
     height: sp(36),
     borderRadius: sp(8),
     borderWidth: 1,
-    borderColor: Colors.warning,
+    borderColor: Colors.accentLight,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
     marginTop: sp(14),
   },
   analysisButtonText: {
-    color: Colors.accent,
+    color: Colors.accentLight,
     fontSize: fs(10),
     fontWeight: "700",
     letterSpacing: 2,

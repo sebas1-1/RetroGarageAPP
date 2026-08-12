@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   menuBtn: { width: sp(40) },
   menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: "#FFFFFF",
+    color: Colors.white,
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,
@@ -290,10 +290,10 @@ const styles = StyleSheet.create({
     marginBottom: sp(2),
     marginLeft: sp(10),
   },
-  req: { color: "#993C1D" },
+  req: { color: Colors.danger },
   errorText: {
     fontSize: fs(12),
-    color: "#993C1D",
+    color: Colors.danger,
     marginLeft: sp(10),
     marginBottom: sp(8),
   },
@@ -308,8 +308,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   categoriaBtnActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.secondary,
+    borderColor: Colors.secondary,
   },
   categoriaBtnText: {
     fontSize: fs(13),
@@ -319,14 +319,14 @@ const styles = StyleSheet.create({
   categoriaBtnTextActive: { color: Colors.cream },
   inputContainer: {
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: sp(6),
+    borderColor: Colors.borderStrong,
+    borderRadius: sp(10),
     paddingHorizontal: sp(10),
     backgroundColor: Colors.white,
   },
   inputContainerError: {
     borderWidth: 1,
-    borderColor: "#993C1D",
+    borderColor: Colors.danger,
     borderRadius: sp(6),
     paddingHorizontal: sp(10),
     backgroundColor: Colors.white,
@@ -348,9 +348,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 3,
   },
-  fabGuardar: { backgroundColor: "#0F6E56" },
-  fabCancelar: { backgroundColor: "#C62828" },
-  fabDisabled: { backgroundColor: "#888" },
+  fabGuardar: { backgroundColor: Colors.accent },
+  fabCancelar: { backgroundColor: Colors.danger },
+  fabDisabled: { backgroundColor: Colors.disabled },
   footer: {
     textAlign: "center",
     fontSize: fs(11),

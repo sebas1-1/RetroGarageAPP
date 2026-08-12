@@ -114,7 +114,7 @@ export default function PayPalReturnScreen() {
       ? Colors.success
       : result.status === "cancelled"
         ? Colors.gray
-        : "#993C1D";
+        : Colors.danger;
 
   return (
     <View style={styles.container}>
@@ -202,14 +202,14 @@ const styles = StyleSheet.create({
   },
   button: {
     width: "100%",
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     borderRadius: sp(8),
     alignItems: "center",
     paddingVertical: sp(14),
     marginTop: sp(28),
   },
   buttonText: {
-    color: Colors.cream,
+    color: Colors.white,
     fontSize: fs(14),
     fontWeight: "600",
   },

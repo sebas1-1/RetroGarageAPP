@@ -75,15 +75,15 @@ export default function InventarioScreen() {
   ).length;
 
   const colorEstado = (estado: EstadoStock) => {
-    if (estado === "AGOTADO") return "#C62828";
-    if (estado === "STOCK BAJO") return "#E65100";
-    return "#2E7D32";
+    if (estado === "AGOTADO") return Colors.danger;
+    if (estado === "STOCK BAJO") return Colors.warning;
+    return Colors.success;
   };
 
   const bgEstado = (estado: EstadoStock) => {
-    if (estado === "AGOTADO") return "#FFEBEE";
-    if (estado === "STOCK BAJO") return "#FFF3E0";
-    return "#E8F5E9";
+    if (estado === "AGOTADO") return Colors.dangerSoft;
+    if (estado === "STOCK BAJO") return Colors.warningSoft;
+    return Colors.successSoft;
   };
 
   return (
@@ -119,13 +119,13 @@ export default function InventarioScreen() {
             <Text style={styles.statLabel}>TOTAL ÍTEMS</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={[styles.statNumber, { color: "#E65100" }]}>
+            <Text style={[styles.statNumber, { color: Colors.warning }]}>
               {stockBajo}
             </Text>
             <Text style={styles.statLabel}>STOCK BAJO</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={[styles.statNumber, { color: "#C62828" }]}>
+            <Text style={[styles.statNumber, { color: Colors.danger }]}>
               {agotados}
             </Text>
             <Text style={styles.statLabel}>AGOTADOS</Text>
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
   menuBtn: { width: sp(40) },
   menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: "#FFFFFF",
+    color: Colors.white,
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,
@@ -285,11 +285,16 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     backgroundColor: Colors.white,
-    borderRadius: sp(8),
+    borderRadius: sp(14),
     borderWidth: 1,
     borderColor: Colors.border,
     paddingVertical: sp(14),
     alignItems: "center",
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   statNumber: {
     fontSize: fs(26),
@@ -315,13 +320,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   addBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     paddingHorizontal: sp(16),
     paddingVertical: sp(8),
     borderRadius: sp(6),
   },
   addBtnText: {
-    color: Colors.cream,
+    color: Colors.white,
     fontSize: fs(13),
     fontWeight: "600",
     letterSpacing: 0.5,
@@ -337,8 +342,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   filtroBtnActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.secondary,
+    borderColor: Colors.secondary,
   },
   filtroBtnText: {
     fontSize: fs(12),
@@ -350,13 +355,18 @@ const styles = StyleSheet.create({
   lista: { gap: sp(10), paddingBottom: sp(8) },
   card: {
     backgroundColor: Colors.white,
-    borderRadius: sp(10),
+    borderRadius: sp(14),
     borderWidth: 1,
     borderColor: Colors.border,
     padding: sp(14),
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   cardLeft: {
     flexDirection: "row",

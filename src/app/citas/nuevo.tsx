@@ -1,7 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Dialog, Input, Text } from "@rneui/themed";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -42,6 +42,55 @@ const INITIAL_FORM = {
   estado: "PENDIENTE",
 };
 
+type DraftStatus = "idle" | "saving" | "saved" | "recovered" | "error";
+
+const DRAFT_STATUS: Record<
+  DraftStatus,
+  {
+    icon: keyof typeof MaterialIcons.glyphMap;
+    title: string;
+    message: string;
+    backgroundColor: string;
+    color: string;
+  }
+> = {
+  idle: {
+    icon: "shield",
+    title: "Guardado automático",
+    message: "Tus cambios se guardarán únicamente en este dispositivo.",
+    backgroundColor: Colors.infoSoft,
+    color: Colors.info,
+  },
+  saving: {
+    icon: "sync",
+    title: "Guardando borrador…",
+    message: "Estamos protegiendo los datos que acabas de ingresar.",
+    backgroundColor: Colors.accentSoft,
+    color: Colors.accent,
+  },
+  saved: {
+    icon: "check-circle",
+    title: "Borrador guardado",
+    message: "Puedes salir y continuar después.",
+    backgroundColor: Colors.secondarySoft,
+    color: Colors.secondary,
+  },
+  recovered: {
+    icon: "restore",
+    title: "Borrador recuperado",
+    message: "Recuperamos correctamente la información anterior.",
+    backgroundColor: Colors.secondarySoft,
+    color: Colors.secondary,
+  },
+  error: {
+    icon: "error-outline",
+    title: "No pudimos guardar el borrador",
+    message: "Mantén esta pantalla abierta e inténtalo nuevamente.",
+    backgroundColor: Colors.dangerSoft,
+    color: Colors.danger,
+  },
+};
+
 // Pantalla para registrar una cita nueva en la agenda del taller.
 export default function NuevaCitaScreen() {
   const router = useRouter();
@@ -64,6 +113,8 @@ export default function NuevaCitaScreen() {
   const [borradorInicializado, setBorradorInicializado] = useState(false);
   const [borradorPendiente, setBorradorPendiente] =
     useState<CitaDraft | null>(null);
+  const [draftStatus, setDraftStatus] = useState<DraftStatus>("idle");
+  const skipNextDraftSave = useRef(false);
 
   const tieneCambiosSinGuardar = Object.keys(INITIAL_FORM).some(
     (key) =>
@@ -151,15 +202,29 @@ export default function NuevaCitaScreen() {
       return;
     }
 
+    if (skipNextDraftSave.current) {
+      skipNextDraftSave.current = false;
+      return;
+    }
+
+    const statusTimeoutId = setTimeout(() => {
+      setDraftStatus(tieneCambiosSinGuardar ? "saving" : "idle");
+    }, 0);
+
     const timeoutId = setTimeout(() => {
       if (tieneCambiosSinGuardar) {
-        void citaDraftService.save(form);
+        void citaDraftService.save(form).then((saved) => {
+          setDraftStatus(saved ? "saved" : "error");
+        });
       } else {
         void citaDraftService.remove();
       }
-    }, 500);
+    }, 900);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(statusTimeoutId);
+      clearTimeout(timeoutId);
+    };
   }, [
     borradorInicializado,
     borradorPendiente,
@@ -190,9 +255,11 @@ export default function NuevaCitaScreen() {
     if (!borradorPendiente) return;
 
     const draft = borradorPendiente;
+    skipNextDraftSave.current = true;
     setForm(draft);
     setErrores({});
     setBorradorPendiente(null);
+    setDraftStatus("recovered");
 
     const cliente = clientes.find(
       (item) => String(item.id_cliente) === draft.id_cliente,
@@ -206,6 +273,7 @@ export default function NuevaCitaScreen() {
     setErrores({});
     setAutosCliente([]);
     setBorradorPendiente(null);
+    setDraftStatus("idle");
   };
 
   const seleccionarCliente = (cliente: Cliente) => {
@@ -346,6 +414,38 @@ export default function NuevaCitaScreen() {
           <View style={styles.titleSection}>
             <Text style={styles.title}>Nueva cita</Text>
             <Text style={styles.subtitle}>Registrá una nueva cita</Text>
+          </View>
+
+          <View
+            accessible
+            accessibilityLiveRegion="polite"
+            accessibilityLabel={`${DRAFT_STATUS[draftStatus].title}. ${DRAFT_STATUS[draftStatus].message}`}
+            style={[
+              styles.draftStatusCard,
+              {
+                backgroundColor: DRAFT_STATUS[draftStatus].backgroundColor,
+                borderColor: DRAFT_STATUS[draftStatus].color,
+              },
+            ]}
+          >
+            <MaterialIcons
+              name={DRAFT_STATUS[draftStatus].icon}
+              size={22}
+              color={DRAFT_STATUS[draftStatus].color}
+            />
+            <View style={styles.draftStatusText}>
+              <Text
+                style={[
+                  styles.draftStatusTitle,
+                  { color: DRAFT_STATUS[draftStatus].color },
+                ]}
+              >
+                {DRAFT_STATUS[draftStatus].title}
+              </Text>
+              <Text style={styles.draftStatusMessage}>
+                {DRAFT_STATUS[draftStatus].message}
+              </Text>
+            </View>
           </View>
 
           <View style={styles.divider} />
@@ -689,7 +789,7 @@ const styles = StyleSheet.create({
   menuBtn: { width: sp(40) },
   menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: "#FFFFFF",
+    color: Colors.white,
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,
@@ -698,6 +798,25 @@ const styles = StyleSheet.create({
   titleSection: { paddingVertical: sp(20) },
   title: { fontSize: fs(22), fontWeight: "600", color: Colors.primary },
   subtitle: { fontSize: fs(13), color: Colors.gray, marginTop: sp(4) },
+  draftStatusCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: sp(12),
+    borderWidth: 1,
+    borderLeftWidth: 4,
+    borderRadius: sp(12),
+    paddingHorizontal: sp(14),
+    paddingVertical: sp(12),
+    marginBottom: sp(12),
+  },
+  draftStatusText: { flex: 1 },
+  draftStatusTitle: { fontSize: fs(13), fontWeight: "700" },
+  draftStatusMessage: {
+    color: Colors.text,
+    fontSize: fs(11),
+    lineHeight: fs(16),
+    marginTop: sp(2),
+  },
   divider: { height: 1, backgroundColor: Colors.border, marginVertical: sp(8) },
   section: { paddingVertical: sp(16) },
   sectionLabel: {
@@ -715,23 +834,23 @@ const styles = StyleSheet.create({
     marginBottom: sp(2),
     marginLeft: sp(10),
   },
-  req: { color: "#993C1D" },
+  req: { color: Colors.danger },
   errorText: {
     fontSize: fs(12),
-    color: "#993C1D",
+    color: Colors.danger,
     marginLeft: sp(10),
     marginBottom: sp(8),
   },
   inputContainer: {
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: sp(6),
+    borderColor: Colors.borderStrong,
+    borderRadius: sp(10),
     paddingHorizontal: sp(10),
     backgroundColor: Colors.white,
   },
   inputContainerError: {
     borderWidth: 1,
-    borderColor: "#993C1D",
+    borderColor: Colors.danger,
     borderRadius: sp(6),
     paddingHorizontal: sp(10),
     backgroundColor: Colors.white,
@@ -754,9 +873,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  listItemActive: { backgroundColor: Colors.primary },
+  listItemActive: { backgroundColor: Colors.secondary },
   listItemText: { fontSize: fs(13), color: Colors.primary },
-  listItemTextActive: { color: Colors.cream },
+  listItemTextActive: { color: Colors.white },
   autosBox: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -778,8 +897,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   autoBtnActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.secondary,
+    borderColor: Colors.secondary,
   },
   autoBtnText: {
     color: Colors.primary,
@@ -802,8 +921,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   servicioBtnActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.secondary,
+    borderColor: Colors.secondary,
   },
   servicioBtnText: {
     fontSize: fs(13),
@@ -822,8 +941,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   estadoBtnActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.secondary,
+    borderColor: Colors.secondary,
   },
   estadoBtnText: { fontSize: fs(12), color: Colors.primary, fontWeight: "600" },
   estadoBtnTextActive: { color: Colors.cream },
@@ -842,9 +961,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 3,
   },
-  fabGuardar: { backgroundColor: "#0F6E56" },
-  fabCancelar: { backgroundColor: "#C62828" },
-  fabDisabled: { backgroundColor: "#888" },
+  fabGuardar: { backgroundColor: Colors.accent },
+  fabCancelar: { backgroundColor: Colors.danger },
+  fabDisabled: { backgroundColor: Colors.disabled },
   footer: {
     textAlign: "center",
     fontSize: fs(11),

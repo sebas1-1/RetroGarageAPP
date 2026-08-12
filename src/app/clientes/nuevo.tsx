@@ -465,7 +465,7 @@ export default function NuevoClienteScreen() {
                     <MaterialIcons
                       name="delete-outline"
                       size={22}
-                      color="#993C1D"
+                      color={Colors.danger}
                     />
                   </TouchableOpacity>
                 </View>
@@ -573,7 +573,7 @@ export default function NuevoClienteScreen() {
                                 : "gpp-bad"
                             }
                             size={20}
-                            color={poliza.vigente ? "#0F6E56" : "#993C1D"}
+                            color={poliza.vigente ? Colors.success : Colors.danger}
                           />
                           <Text style={styles.policyCompany}>
                             {poliza.aseguradora}
@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
   menuBtn: { width: sp(40) },
   menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: "#FFFFFF",
+    color: Colors.white,
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,
@@ -731,18 +731,18 @@ const styles = StyleSheet.create({
     marginBottom: sp(2),
     marginLeft: sp(10),
   },
-  req: { color: "#993C1D" },
+  req: { color: Colors.danger },
   addBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: sp(4),
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     borderRadius: sp(6),
     paddingHorizontal: sp(10),
     paddingVertical: sp(8),
   },
   addBtnText: {
-    color: Colors.cream,
+    color: Colors.white,
     fontSize: fs(12),
     fontWeight: "600",
   },
@@ -773,7 +773,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: fs(12),
-    color: "#993C1D",
+    color: Colors.danger,
     marginLeft: sp(10),
     marginBottom: sp(8),
   },
@@ -781,14 +781,14 @@ const styles = StyleSheet.create({
   halfField: { flex: 1 },
   inputContainer: {
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: sp(6),
+    borderColor: Colors.borderStrong,
+    borderRadius: sp(10),
     paddingHorizontal: sp(10),
     backgroundColor: Colors.white,
   },
   inputContainerError: {
     borderWidth: 1,
-    borderColor: "#993C1D",
+    borderColor: Colors.danger,
     borderRadius: sp(6),
     paddingHorizontal: sp(10),
     backgroundColor: Colors.white,
@@ -799,13 +799,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: sp(3),
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     borderRadius: sp(5),
     paddingHorizontal: sp(7),
     paddingVertical: sp(6),
   },
   policySearchButtonText: {
-    color: Colors.cream,
+    color: Colors.white,
     fontSize: fs(9),
     fontWeight: "700",
   },
@@ -816,12 +816,12 @@ const styles = StyleSheet.create({
     marginTop: sp(4),
   },
   policyCardValid: {
-    backgroundColor: "#E8F5E9",
-    borderColor: "#0F6E56",
+    backgroundColor: Colors.successSoft,
+    borderColor: Colors.success,
   },
   policyCardInvalid: {
-    backgroundColor: "#FFF3E0",
-    borderColor: "#993C1D",
+    backgroundColor: Colors.warningSoft,
+    borderColor: Colors.danger,
   },
   policyHeader: {
     flexDirection: "row",
@@ -849,12 +849,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   policyStatusValid: {
-    color: "#0F6E56",
-    backgroundColor: "#C8E6C9",
+    color: Colors.success,
+    backgroundColor: Colors.successSoft,
   },
   policyStatusInvalid: {
-    color: "#993C1D",
-    backgroundColor: "#FFCCBC",
+    color: Colors.danger,
+    backgroundColor: Colors.dangerSoft,
   },
   policyDetail: {
     color: Colors.primary,
@@ -873,7 +873,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: sp(8),
-    backgroundColor: "#F4F4F4",
+    backgroundColor: Colors.surfaceAlt,
     padding: sp(10),
     marginTop: sp(4),
   },
@@ -897,9 +897,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 3,
   },
-  fabGuardar: { backgroundColor: "#0F6E56" },
-  fabCancelar: { backgroundColor: "#C62828" },
-  fabDisabled: { backgroundColor: "#888" },
+  fabGuardar: { backgroundColor: Colors.accent },
+  fabCancelar: { backgroundColor: Colors.danger },
+  fabDisabled: { backgroundColor: Colors.disabled },
   footer: {
     textAlign: "center",
     fontSize: fs(11),

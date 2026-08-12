@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   menuBtn: { width: sp(40) },
   menuIcon: { color: Colors.white, fontSize: fs(20) },
   headerTitle: {
-    color: "#FFFFFF",
+    color: Colors.white,
     fontSize: fs(14),
     fontWeight: "600",
     letterSpacing: 2,
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: fs(12),
-    color: "#993C1D",
+    color: Colors.danger,
     marginLeft: sp(10),
     marginBottom: sp(6),
   },
@@ -358,21 +358,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   tipoBtnActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.secondary,
+    borderColor: Colors.secondary,
   },
   tipoBtnText: { fontSize: fs(13), color: Colors.primary, fontWeight: "500" },
   tipoBtnTextActive: { color: Colors.cream },
   inputContainer: {
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: sp(6),
+    borderColor: Colors.borderStrong,
+    borderRadius: sp(10),
     paddingHorizontal: sp(10),
     backgroundColor: Colors.white,
   },
   inputContainerError: {
     borderWidth: 1,
-    borderColor: "#993C1D",
+    borderColor: Colors.danger,
     borderRadius: sp(6),
     paddingHorizontal: sp(10),
     backgroundColor: Colors.white,
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   inputText: { fontSize: fs(14), color: Colors.primary },
   inputWrapper: { paddingHorizontal: 0, marginBottom: sp(4) },
   botonCrear: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     borderRadius: sp(8),
     paddingVertical: sp(16),
     alignItems: "center",
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
   },
   botonDisabled: { backgroundColor: Colors.gray },
   botonCrearTexto: {
-    color: Colors.cream,
+    color: Colors.white,
     fontSize: fs(13),
     fontWeight: "700",
     letterSpacing: 3,

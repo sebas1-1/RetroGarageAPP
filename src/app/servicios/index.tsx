@@ -113,7 +113,7 @@ export default function ServiciosScreen() {
             </Text>
             <View style={styles.botones}>
               <TouchableOpacity
-                style={[styles.iconBtn, { backgroundColor: "#1976D2" }]}
+                style={[styles.iconBtn, { backgroundColor: Colors.secondary }]}
                 onPress={() =>
                   router.push({
                     pathname: "/servicios/editar",
@@ -124,7 +124,7 @@ export default function ServiciosScreen() {
                 <MaterialIcons name="edit" size={22} color="white" />
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.iconBtn, { backgroundColor: "#C62828" }]}
+                style={[styles.iconBtn, { backgroundColor: Colors.danger }]}
                 onPress={() => setServicioAEliminar(item.id_servicio)}
               >
                 <MaterialIcons name="delete" size={22} color="white" />
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     marginBottom: sp(16),
   },
   btnNuevo: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     borderRadius: sp(8),
     flexDirection: "row",
     alignItems: "center",
@@ -196,12 +196,22 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: sp(8),
+    borderColor: Colors.borderStrong,
+    borderRadius: sp(10),
     paddingHorizontal: sp(10),
     backgroundColor: Colors.white,
   },
-  card: { borderRadius: sp(10), marginBottom: sp(8) },
+  card: {
+    backgroundColor: Colors.white,
+    borderColor: Colors.border,
+    borderRadius: sp(14),
+    marginBottom: sp(8),
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
   cardHeader: { flexDirection: "row", marginBottom: sp(8) },
   categoriaBadge: {
     backgroundColor: Colors.cream,
@@ -220,7 +230,7 @@ const styles = StyleSheet.create({
   },
   precio: {
     fontSize: fs(15),
-    color: "#0F6E56",
+    color: Colors.success,
     fontWeight: "600",
     marginBottom: sp(8),
   },

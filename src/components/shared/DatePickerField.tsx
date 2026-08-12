@@ -176,8 +176,8 @@ const styles = StyleSheet.create({
   field: {
     minHeight: sp(50),
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: sp(6),
+    borderColor: Colors.borderStrong,
+    borderRadius: sp(10),
     paddingHorizontal: sp(10),
     backgroundColor: Colors.white,
     flexDirection: "row",
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: sp(8),
   },
-  fieldError: { borderColor: "#993C1D" },
+  fieldError: { borderColor: Colors.danger },
   openButton: {
     flex: 1,
     alignSelf: "stretch",
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
   placeholder: { color: Colors.gray },
   errorText: {
     fontSize: fs(12),
-    color: "#993C1D",
+    color: Colors.danger,
     marginLeft: sp(10),
     marginTop: sp(4),
   },

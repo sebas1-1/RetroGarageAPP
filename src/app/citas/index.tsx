@@ -16,16 +16,16 @@ import { Cita, citasService } from "../../services/citasService";
 
 // Colores de texto segun el estado de la cita.
 const ESTADO_COLORS: Record<string, string> = {
-  PENDIENTE: "#854F0B",
-  COMPLETADA: "#0F6E56",
-  CANCELADA: "#993C1D",
+  PENDIENTE: Colors.warning,
+  COMPLETADA: Colors.success,
+  CANCELADA: Colors.danger,
 };
 
 // Fondos suaves para las etiquetas de estado.
 const ESTADO_BG: Record<string, string> = {
-  PENDIENTE: "#FEF3C7",
-  COMPLETADA: "#D1FAE5",
-  CANCELADA: "#FAECE7",
+  PENDIENTE: Colors.warningSoft,
+  COMPLETADA: Colors.successSoft,
+  CANCELADA: Colors.dangerSoft,
 };
 
 // Pantalla principal de citas: permite buscar, filtrar, editar y eliminar.
@@ -182,7 +182,7 @@ export default function CitasScreen() {
 
             <View style={styles.botones}>
               <TouchableOpacity
-                style={[styles.iconBtn, { backgroundColor: "#1976D2" }]}
+                style={[styles.iconBtn, { backgroundColor: Colors.secondary }]}
                 onPress={() =>
                   router.push({
                     pathname: "/citas/editar",
@@ -193,7 +193,7 @@ export default function CitasScreen() {
                 <MaterialIcons name="edit" size={22} color="white" />
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.iconBtn, { backgroundColor: "#C62828" }]}
+                style={[styles.iconBtn, { backgroundColor: Colors.danger }]}
                 onPress={() => setCitaAEliminar(item.id_cita)}
               >
                 <MaterialIcons name="delete" size={22} color="white" />
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     marginBottom: sp(16),
   },
   btnNuevo: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     borderRadius: sp(8),
     flexDirection: "row",
     alignItems: "center",
@@ -265,8 +265,8 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: sp(8),
+    borderColor: Colors.borderStrong,
+    borderRadius: sp(10),
     paddingHorizontal: sp(10),
     backgroundColor: Colors.white,
   },
@@ -280,7 +280,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   filtroBtnText: { fontSize: fs(11), fontWeight: "600", color: Colors.primary },
-  card: { borderRadius: sp(10), marginBottom: sp(8), padding: sp(4) },
+  card: {
+    backgroundColor: Colors.white,
+    borderColor: Colors.border,
+    borderRadius: sp(14),
+    marginBottom: sp(8),
+    padding: sp(4),
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -300,7 +311,7 @@ const styles = StyleSheet.create({
     marginLeft: sp(8),
   },
   estadoText: { fontSize: fs(10), fontWeight: "700", letterSpacing: 0.5 },
-  info: { fontSize: fs(13), color: "#444", marginBottom: sp(4) },
+  info: { fontSize: fs(13), color: Colors.text, marginBottom: sp(4) },
   botones: {
     flexDirection: "row",
     justifyContent: "flex-end",

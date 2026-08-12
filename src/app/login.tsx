@@ -1,4 +1,5 @@
 import { Text } from "@rneui/themed";
+import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -10,6 +11,7 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { MessageDialog } from "../components/shared/MessageDialog";
@@ -42,6 +44,8 @@ type RetroPinStatus = "checking" | "setup" | "locked" | "unlocked";
 // Pantalla inicial: login real y solicitud de cuenta sin rol asignado.
 export default function LoginScreen() {
   const router = useRouter();
+  const { width, height } = useWindowDimensions();
+  const isWideLayout = width >= 960;
 
   const [modo, setModo] = useState<"login" | "registro" | "recuperacion">(
     "login",
@@ -627,13 +631,47 @@ export default function LoginScreen() {
         bounces={false}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>RETRO GARAGE</Text>
-          <Text style={styles.headerSub}>CLASSIC CAR SHOP</Text>
-          <View style={styles.headerDivider} />
-        </View>
+        <View
+          style={[
+            styles.loginShell,
+            { minHeight: height },
+          ]}
+        >
+          <View
+            accessible
+            accessibilityRole="image"
+            accessibilityLabel="Automóviles clásicos dentro de un taller de exhibición"
+            style={styles.hero}
+          >
+            <ExpoImage
+              source={require("../../assets/images/pexels-marcel-condurachi-765466373-35828311.jpg")}
+              style={styles.heroImage}
+              contentFit="cover"
+              contentPosition={
+                isWideLayout ? "center" : { top: "52%", left: "55%" }
+              }
+              transition={350}
+              accessible={false}
+            />
+            <View style={styles.heroOverlay} />
+          </View>
 
-        <View style={styles.body}>
+          <View style={styles.loginContent}>
+            <View style={styles.heroBrand}>
+              <Text style={styles.headerTitle}>RETRO GARAGE</Text>
+              <Text style={styles.headerSub}>CLASSIC CAR SHOP</Text>
+              <View style={styles.headerDivider} />
+              {isWideLayout ? (
+                <Text style={styles.heroClaim}>
+                  PASIÓN CLÁSICA. SERVICIO CONFIABLE.
+                </Text>
+              ) : null}
+            </View>
+
+          <View
+            style={[styles.formPanel, isWideLayout && styles.formPanelWide]}
+          >
+            <View style={[styles.body, isWideLayout && styles.bodyWide]}>
           <Text style={styles.titulo}>
             {modo === "login"
               ? "Acceso administrativo"
@@ -1301,9 +1339,12 @@ export default function LoginScreen() {
               <Text style={styles.olvidaste}>Volver al inicio de sesión</Text>
             </TouchableOpacity>
           )}
-        </View>
+            </View>
 
-        <Text style={styles.footer}>© 2026 RETRO GARAGE</Text>
+            <Text style={styles.footer}>© 2026 RETRO GARAGE</Text>
+          </View>
+        </View>
+        </View>
       </ScrollView>
 
       <MessageDialog
@@ -1325,11 +1366,48 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
   },
-  header: {
-    backgroundColor: Colors.primary,
-    paddingTop: sp(56),
-    paddingBottom: sp(36),
+  loginShell: {
+    flexGrow: 1,
+    position: "relative",
+    backgroundColor: Colors.primaryDark,
+  },
+  hero: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    overflow: "hidden",
+  },
+  heroImage: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+  heroOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: Colors.loginOverlay,
+  },
+  loginContent: {
+    flexGrow: 1,
+    width: "100%",
     alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: sp(16),
+    paddingTop: sp(34),
+    paddingBottom: sp(26),
+  },
+  heroBrand: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: sp(24),
+    paddingBottom: sp(24),
   },
   headerTitle: {
     color: Colors.white,
@@ -1349,11 +1427,40 @@ const styles = StyleSheet.create({
     height: 1.5,
     backgroundColor: Colors.accent,
   },
+  heroClaim: {
+    color: Colors.white,
+    fontSize: fs(10),
+    fontWeight: "600",
+    letterSpacing: 2.2,
+    marginTop: sp(28),
+    textAlign: "center",
+  },
+  formPanel: {
+    width: "100%",
+    maxWidth: sp(620),
+    backgroundColor: Colors.loginCard,
+    borderWidth: 1,
+    borderColor: Colors.accentSoft,
+    borderRadius: sp(18),
+    overflow: "hidden",
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+  formPanelWide: {
+    maxWidth: sp(680),
+  },
   body: {
-    flex: 1,
-    paddingHorizontal: sp(20),
-    paddingTop: sp(36),
+    width: "100%",
+    paddingHorizontal: sp(22),
+    paddingTop: sp(28),
     paddingBottom: sp(24),
+  },
+  bodyWide: {
+    paddingHorizontal: sp(40),
+    paddingTop: sp(36),
   },
   titulo: {
     fontSize: fs(24),

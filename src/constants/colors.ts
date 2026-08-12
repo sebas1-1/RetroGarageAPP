@@ -34,5 +34,7 @@ export const Colors = {
 
   // Capas y sombras suaves.
   overlay: "rgba(9, 27, 44, 0.48)",
+  loginOverlay: "rgba(9, 27, 44, 0.72)",
+  loginCard: "rgba(250, 246, 238, 0.97)",
   shadow: "#091B2C",
 };

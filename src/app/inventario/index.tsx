@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import { Text } from "@rneui/themed";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
@@ -10,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { MessageDialog } from "../../components/shared/MessageDialog";
-import { Colors } from "../../constants/colors";
+import type { AppColors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import {
   EstadoStock,
@@ -24,6 +25,7 @@ const FILTROS = ["TODOS", "REPUESTOS", "HERRAMIENTAS", "INSUMOS"];
 
 // Pantalla de inventario: lista productos, stock y acciones rapidas.
 export default function InventarioScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   const router = useRouter();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -249,7 +251,7 @@ export default function InventarioScreen() {
 }
 
 // Estilos visuales del listado de inventario.
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   header: {
     backgroundColor: Colors.primary,

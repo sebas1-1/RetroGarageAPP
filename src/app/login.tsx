@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import { Text } from "@rneui/themed";
 import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
@@ -15,7 +16,7 @@ import {
   View,
 } from "react-native";
 import { MessageDialog } from "../components/shared/MessageDialog";
-import { Colors } from "../constants/colors";
+import type { AppColors } from "../constants/colors";
 import { fs, sp } from "../constants/responsive";
 import { setCurrentUserId } from "../services/authSession";
 import { usuariosService } from "../services/usuariosService";
@@ -43,6 +44,7 @@ type RetroPinStatus = "checking" | "setup" | "locked" | "unlocked";
 
 // Pantalla inicial: login real y solicitud de cuenta sin rol asignado.
 export default function LoginScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   const router = useRouter();
   const { width, height } = useWindowDimensions();
   const isWideLayout = width >= 960;
@@ -1358,7 +1360,7 @@ export default function LoginScreen() {
 }
 
 // Estilos visuales del login.
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.cream,

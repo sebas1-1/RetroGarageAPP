@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Text } from "@rneui/themed";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -11,7 +12,7 @@ import {
 } from "react-native";
 
 import { MessageDialog } from "../../components/shared/MessageDialog";
-import { Colors } from "../../constants/colors";
+import type { AppColors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { pagosService } from "../../services/pagosService";
 
@@ -38,6 +39,7 @@ const formatearFecha = (value: string) => {
 
 // Pantalla de pagos: muestra el historial de cobros registrados.
 export default function PagosScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   const router = useRouter();
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -196,7 +198,7 @@ export default function PagosScreen() {
 }
 
 // Estilos visuales del historial de pagos.
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
 

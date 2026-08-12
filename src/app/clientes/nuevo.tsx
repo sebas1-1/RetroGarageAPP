@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Input, Text } from "@rneui/themed";
 import { useRouter } from "expo-router";
@@ -13,7 +14,7 @@ import {
 import { DatePickerField } from "../../components/shared/DatePickerField";
 import { MessageDialog } from "../../components/shared/MessageDialog";
 import { SelectField } from "../../components/shared/SelectField";
-import { Colors } from "../../constants/colors";
+import type { AppColors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import {
   aseguradorasService,
@@ -43,6 +44,7 @@ const normalizarPlaca = (placa: string) =>
 
 // Pantalla para registrar un cliente nuevo.
 export default function NuevoClienteScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   const router = useRouter();
   const [guardando, setGuardando] = useState(false);
   const [consultandoTse, setConsultandoTse] = useState(false);
@@ -684,7 +686,7 @@ export default function NuevoClienteScreen() {
 }
 
 // Estilos visuales del formulario de nuevo cliente.
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   header: {
     backgroundColor: Colors.primary,

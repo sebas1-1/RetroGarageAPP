@@ -2,8 +2,9 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Text } from "@rneui/themed";
 import { useState } from "react";
 import { FlatList, Modal, Pressable, StyleSheet } from "react-native";
-import { Colors } from "../../constants/colors";
+import type { AppColors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
+import { useThemedStyles } from "../../contexts/AccessibilityThemeContext";
 import { OpcionGeografica } from "../../services/geografiaService";
 
 type Props = {
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export function SelectField({ value, options, placeholder, onChange, disabled, loading, errorMessage }: Props) {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   const [visible, setVisible] = useState(false);
   const selected = options.find((option) => option.id === value);
 
@@ -57,7 +59,7 @@ export function SelectField({ value, options, placeholder, onChange, disabled, l
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   field: { minHeight: sp(48), flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: Colors.borderStrong, borderRadius: sp(10), paddingHorizontal: sp(12), backgroundColor: Colors.white, marginBottom: sp(12) },
   errorBorder: { borderColor: Colors.danger },
   disabled: { opacity: 0.55 },

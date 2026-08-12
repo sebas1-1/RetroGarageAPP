@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Text } from "@rneui/themed";
 import { useRouter } from "expo-router";
@@ -10,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { MessageDialog } from "../components/shared/MessageDialog";
-import { Colors } from "../constants/colors";
+import type { AppColors } from "../constants/colors";
 import { fs, sp } from "../constants/responsive";
 import {
   alquileresService,
@@ -21,6 +22,7 @@ const CATEGORIAS = ["Todas", "Economico", "Sedan", "SUV"] as const;
 
 // Consulta vehiculos sustitutos ofrecidos por empresas asociadas.
 export default function VehiculosAlquilerScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   const router = useRouter();
   const [categoria, setCategoria] =
     useState<(typeof CATEGORIAS)[number]>("Todas");
@@ -259,7 +261,7 @@ export default function VehiculosAlquilerScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   header: {
     backgroundColor: Colors.primary,

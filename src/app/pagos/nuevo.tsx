@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Input, Text } from "@rneui/themed";
 import * as WebBrowser from "expo-web-browser";
@@ -13,7 +14,7 @@ import {
   View,
 } from "react-native";
 import { MessageDialog } from "../../components/shared/MessageDialog";
-import { Colors } from "../../constants/colors";
+import type { AppColors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Cita, citasService } from "../../services/citasService";
 import { getCurrentUserId } from "../../services/authSession";
@@ -63,6 +64,7 @@ const PASO_PAGO = 3;
 
 // Pantalla en pasos para registrar un pago ligado a cita o venta directa.
 export default function NuevoPagoScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   const router = useRouter();
 
   // Paso actual del flujo y tipo de pago que eligio el usuario.
@@ -1108,7 +1110,7 @@ export default function NuevoPagoScreen() {
 }
 
 // Estilos visuales del formulario de pagos.
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   header: {
     backgroundColor: Colors.primary,

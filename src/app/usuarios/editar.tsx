@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Input, Text } from "@rneui/themed";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -12,7 +13,7 @@ import {
   View,
 } from "react-native";
 import { MessageDialog } from "../../components/shared/MessageDialog";
-import { Colors } from "../../constants/colors";
+import type { AppColors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Rol, usuariosService } from "../../services/usuariosService";
 import {
@@ -26,6 +27,7 @@ import {
 
 // Pantalla para modificar un usuario administrativo existente.
 export default function EditarUsuarioScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -394,7 +396,7 @@ export default function EditarUsuarioScreen() {
 }
 
 // Estilos visuales del formulario de editar usuario.
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {

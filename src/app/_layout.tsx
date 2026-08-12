@@ -1,11 +1,27 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Tabs } from "expo-router";
-import { Colors } from "../constants/colors";
+import { View } from "react-native";
+import { AccessibilityThemeButton } from "../components/shared/AccessibilityThemeButton";
+import {
+  AccessibilityThemeProvider,
+  useAppTheme,
+} from "../contexts/AccessibilityThemeContext";
 
 // Este layout define la navegacion principal de la app con el menu inferior.
 export default function Layout() {
   return (
-    <Tabs
+    <AccessibilityThemeProvider>
+      <ThemedLayout />
+    </AccessibilityThemeProvider>
+  );
+}
+
+function ThemedLayout() {
+  const { colors: Colors } = useAppTheme();
+
+  return (
+    <View style={{ flex: 1, backgroundColor: Colors.cream }}>
+      <Tabs
       screenOptions={{
         // Estilos generales que comparten todas las opciones del menu.
         tabBarActiveTintColor: Colors.accent,
@@ -34,7 +50,7 @@ export default function Layout() {
         headerTitleStyle: { fontWeight: "600", letterSpacing: 2, fontSize: 14 },
         headerTitleAlign: "center",
       }}
-    >
+      >
       {/* La ruta index carga el login, pero no debe aparecer en el menu. */}
       <Tabs.Screen
         name="index"
@@ -169,6 +185,8 @@ export default function Layout() {
           headerShown: false,
         }}
       />
-    </Tabs>
+      </Tabs>
+      <AccessibilityThemeButton />
+    </View>
   );
 }

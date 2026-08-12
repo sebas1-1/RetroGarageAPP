@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Card, Dialog, Input, Text } from "@rneui/themed";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -10,12 +11,13 @@ import {
     View,
 } from "react-native";
 import { MessageDialog } from "../../components/shared/MessageDialog";
-import { Colors } from "../../constants/colors";
+import type { AppColors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Servicio, serviciosService } from "../../services/serviciosService";
 
 // Pantalla de servicios: lista, busca, edita y elimina servicios del taller.
 export default function ServiciosScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   const router = useRouter();
 
   const [servicios, setServicios] = useState<Servicio[]>([]);
@@ -169,7 +171,7 @@ export default function ServiciosScreen() {
 }
 
 // Estilos visuales del listado de servicios.
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream, padding: sp(16) },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   title: {

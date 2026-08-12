@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Input, Text } from "@rneui/themed";
 import { useRouter } from "expo-router";
@@ -10,12 +11,13 @@ import {
   View,
 } from "react-native";
 import { MessageDialog } from "../components/shared/MessageDialog";
-import { Colors } from "../constants/colors";
+import type { AppColors } from "../constants/colors";
 import { fs, sp } from "../constants/responsive";
 import { GruaSocio, gruasService } from "../services/gruasService";
 
 // Consulta unidades externas disponibles para asistencia vial.
 export default function AsistenciaVialScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   const router = useRouter();
   const [provincia, setProvincia] = useState("");
   const [gruas, setGruas] = useState<GruaSocio[]>([]);
@@ -220,7 +222,7 @@ export default function AsistenciaVialScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   header: {
     backgroundColor: Colors.primary,

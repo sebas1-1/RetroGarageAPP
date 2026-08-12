@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Text } from "@rneui/themed";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -9,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Colors } from "../constants/colors";
+import type { AppColors } from "../constants/colors";
 import { fs, screen, sp } from "../constants/responsive";
 import { Cita, citasService } from "../services/citasService";
 import { pagosService } from "../services/pagosService";
@@ -71,6 +72,7 @@ const ACCESOS = [
 
 // Dashboard principal: resume ingresos, citas del dia y accesos rapidos.
 export default function DashboardScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   const router = useRouter();
 
   // Estados principales que se actualizan cada vez que la pantalla toma foco.
@@ -313,7 +315,7 @@ export default function DashboardScreen() {
 }
 
 // Estilos visuales del dashboard principal.
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   scroll: { flex: 1, paddingHorizontal: sp(20), paddingTop: sp(20) },
   saludoSection: {

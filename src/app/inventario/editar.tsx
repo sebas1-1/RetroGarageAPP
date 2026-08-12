@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Input, Text } from "@rneui/themed";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -12,7 +13,7 @@ import {
     View,
 } from "react-native";
 import { MessageDialog } from "../../components/shared/MessageDialog";
-import { Colors } from "../../constants/colors";
+import type { AppColors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Categoria, categoriasService } from "../../services/categoriasService";
 import {
@@ -25,6 +26,7 @@ const UNIDADES = ["Unidades", "Litros", "Metros"];
 
 // Pantalla para editar un producto ya registrado en inventario.
 export default function EditarProductoScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [cargando, setCargando] = useState(true);
@@ -443,7 +445,7 @@ export default function EditarProductoScreen() {
 }
 
 // Estilos visuales del formulario de editar producto.
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   loadingContainer: {
     flex: 1,
     justifyContent: "center",

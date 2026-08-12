@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Button, Card, Dialog, Input, Text } from "@rneui/themed";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -9,12 +10,13 @@ import {
   View,
 } from "react-native";
 import { MessageDialog } from "../../components/shared/MessageDialog";
-import { Colors } from "../../constants/colors";
+import type { AppColors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Usuario, usuariosService } from "../../services/usuariosService";
 
 // Pantalla de usuarios: administra cuentas internas del sistema.
 export default function UsuariosScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   const router = useRouter();
 
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -183,7 +185,7 @@ export default function UsuariosScreen() {
 }
 
 // Estilos visuales del listado de usuarios.
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream, padding: sp(16) },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   title: {

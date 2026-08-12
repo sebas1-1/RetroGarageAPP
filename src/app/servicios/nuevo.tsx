@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Input, Text } from "@rneui/themed";
 import { useRouter } from "expo-router";
@@ -12,13 +13,14 @@ import {
   View,
 } from "react-native";
 import { MessageDialog } from "../../components/shared/MessageDialog";
-import { Colors } from "../../constants/colors";
+import type { AppColors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Categoria, categoriasService } from "../../services/categoriasService";
 import { serviciosService } from "../../services/serviciosService";
 
 // Pantalla para crear un servicio nuevo con categoria y precio.
 export default function NuevoServicioScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   const router = useRouter();
   const [guardando, setGuardando] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -249,7 +251,7 @@ export default function NuevoServicioScreen() {
 }
 
 // Estilos visuales del formulario de nuevo servicio.
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {

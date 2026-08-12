@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Card, Dialog, Input, Text } from "@rneui/themed";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -10,26 +11,23 @@ import {
     View,
 } from "react-native";
 import { MessageDialog } from "../../components/shared/MessageDialog";
-import { Colors } from "../../constants/colors";
+import type { AppColors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Cita, citasService } from "../../services/citasService";
 
-// Colores de texto segun el estado de la cita.
-const ESTADO_COLORS: Record<string, string> = {
-  PENDIENTE: Colors.warning,
-  COMPLETADA: Colors.success,
-  CANCELADA: Colors.danger,
-};
-
-// Fondos suaves para las etiquetas de estado.
-const ESTADO_BG: Record<string, string> = {
-  PENDIENTE: Colors.warningSoft,
-  COMPLETADA: Colors.successSoft,
-  CANCELADA: Colors.dangerSoft,
-};
-
 // Pantalla principal de citas: permite buscar, filtrar, editar y eliminar.
 export default function CitasScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
+  const ESTADO_COLORS: Record<string, string> = {
+    PENDIENTE: Colors.warning,
+    COMPLETADA: Colors.success,
+    CANCELADA: Colors.danger,
+  };
+  const ESTADO_BG: Record<string, string> = {
+    PENDIENTE: Colors.warningSoft,
+    COMPLETADA: Colors.successSoft,
+    CANCELADA: Colors.dangerSoft,
+  };
   const router = useRouter();
 
   const [citas, setCitas] = useState<Cita[]>([]);
@@ -238,7 +236,7 @@ export default function CitasScreen() {
 }
 
 // Estilos visuales del listado de citas.
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream, padding: sp(16) },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   title: {

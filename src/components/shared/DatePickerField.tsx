@@ -10,8 +10,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Colors } from "../../constants/colors";
+import type { AppColors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
+import { useThemedStyles } from "../../contexts/AccessibilityThemeContext";
 
 type DatePickerFieldProps = {
   value: string;
@@ -51,16 +52,6 @@ const formatDisplayDate = (value: string) => {
   });
 };
 
-const webInputStyle: React.CSSProperties = {
-  flex: 1,
-  alignSelf: "stretch",
-  border: 0,
-  backgroundColor: "transparent",
-  color: Colors.primary,
-  fontSize: fs(14),
-  outline: "none",
-};
-
 export function DatePickerField({
   value,
   onChange,
@@ -70,6 +61,16 @@ export function DatePickerField({
   maximumDate,
   allowClear = false,
 }: DatePickerFieldProps) {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
+  const webInputStyle: React.CSSProperties = {
+    flex: 1,
+    alignSelf: "stretch",
+    border: 0,
+    backgroundColor: "transparent",
+    color: Colors.primary,
+    fontSize: fs(14),
+    outline: "none",
+  };
   const [showPicker, setShowPicker] = useState(false);
   const selectedDate = toDateValue(value);
   const minValue = minimumDate ? toDateString(minimumDate) : undefined;
@@ -171,7 +172,7 @@ export function DatePickerField({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   wrapper: { marginBottom: sp(8) },
   field: {
     minHeight: sp(50),

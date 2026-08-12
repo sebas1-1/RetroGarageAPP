@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Dialog, Input, Text } from "@rneui/themed";
 import { useRouter } from "expo-router";
@@ -13,7 +14,7 @@ import {
 } from "react-native";
 import { DatePickerField } from "../../components/shared/DatePickerField";
 import { MessageDialog } from "../../components/shared/MessageDialog";
-import { Colors } from "../../constants/colors";
+import type { AppColors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Auto, autosService } from "../../services/autosService";
 import {
@@ -44,7 +45,7 @@ const INITIAL_FORM = {
 
 type DraftStatus = "idle" | "saving" | "saved" | "recovered" | "error";
 
-const DRAFT_STATUS: Record<
+const getDraftStatus = (Colors: AppColors): Record<
   DraftStatus,
   {
     icon: keyof typeof MaterialIcons.glyphMap;
@@ -53,7 +54,7 @@ const DRAFT_STATUS: Record<
     backgroundColor: string;
     color: string;
   }
-> = {
+> => ({
   idle: {
     icon: "shield",
     title: "Guardado automático",
@@ -89,10 +90,12 @@ const DRAFT_STATUS: Record<
     backgroundColor: Colors.dangerSoft,
     color: Colors.danger,
   },
-};
+});
 
 // Pantalla para registrar una cita nueva en la agenda del taller.
 export default function NuevaCitaScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
+  const DRAFT_STATUS = getDraftStatus(Colors);
   const router = useRouter();
   const [guardando, setGuardando] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -769,7 +772,7 @@ export default function NuevaCitaScreen() {
 }
 
 // Estilos visuales del formulario de nueva cita.
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   confirmMessage: {

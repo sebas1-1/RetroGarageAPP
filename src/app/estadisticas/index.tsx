@@ -12,8 +12,9 @@ import {
 } from "react-native";
 
 import { MessageDialog } from "../../components/shared/MessageDialog";
-import { Colors } from "../../constants/colors";
+import type { AppColors } from "../../constants/colors";
 import { fs, screen, sp } from "../../constants/responsive";
+import { useThemedStyles } from "../../contexts/AccessibilityThemeContext";
 import { pagosService } from "../../services/pagosService";
 
 interface PagoEstadistica {
@@ -35,7 +36,6 @@ interface MetodoResumen {
 
 // Nombres cortos usados en la grafica de ingresos.
 const MONTHS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun"];
-const METHOD_COLORS = [Colors.primary, Colors.accent, Colors.warning];
 
 // Obtiene la fecha real del pago aunque venga como fecha_pago o fecha.
 const getPagoDate = (pago: PagoEstadistica) =>
@@ -54,6 +54,7 @@ const sameMonth = (date: Date, reference: Date) =>
 
 // Pantalla de analisis del negocio basada en los pagos registrados.
 export default function EstadisticasScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   // Estados para los pagos, el loader y los mensajes de error.
   const [pagos, setPagos] = useState<PagoEstadistica[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -84,6 +85,7 @@ export default function EstadisticasScreen() {
 
   // Agrupa los pagos por mes, metodo y tipo para evitar datos quemados.
   const stats = useMemo(() => {
+    const methodColors = [Colors.primary, Colors.accent, Colors.warning];
     const now = new Date();
     const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     // Filtra pagos del mes actual y del mes anterior para comparar rendimiento.
@@ -131,7 +133,7 @@ export default function EstadisticasScreen() {
         monto,
         porcentaje:
           currentTotal > 0 ? Math.round((monto / currentTotal) * 100) : 0,
-        color: METHOD_COLORS[index % METHOD_COLORS.length],
+        color: methodColors[index % methodColors.length],
       }))
       .sort((a, b) => b.monto - a.monto);
 
@@ -154,7 +156,7 @@ export default function EstadisticasScreen() {
       maxMonth,
       methods,
     };
-  }, [pagos]);
+  }, [Colors, pagos]);
 
   if (cargando) {
     return (
@@ -303,6 +305,7 @@ export default function EstadisticasScreen() {
 }
 
 function SectionTitle({ children }: { children: string }) {
+  const { styles } = useThemedStyles(createStyles);
   return <Text style={styles.sectionTitle}>{children}</Text>;
 }
 
@@ -318,6 +321,7 @@ function MetricCard({
   helper: string;
   positive: boolean;
 }) {
+  const { styles } = useThemedStyles(createStyles);
   return (
     <View style={styles.metricCard}>
       <Text style={styles.metricLabel}>{label}</Text>
@@ -336,6 +340,7 @@ function MetricCard({
 
 // Fila usada para cada metodo de pago dentro del desglose.
 function PaymentMethodRow({ method }: { method: MetodoResumen }) {
+  const { styles } = useThemedStyles(createStyles);
   return (
     <View style={styles.methodRow}>
       <View style={styles.methodLeft}>
@@ -352,6 +357,7 @@ function PaymentMethodRow({ method }: { method: MetodoResumen }) {
 
 // Item de texto para el resumen inferior.
 function Insight({ children }: { children: ReactNode }) {
+  const { styles } = useThemedStyles(createStyles);
   return (
     <View style={styles.insightRow}>
       <Text style={styles.insightBullet}>*</Text>
@@ -361,7 +367,7 @@ function Insight({ children }: { children: ReactNode }) {
 }
 
 // Estilos visuales de la pantalla de estadisticas.
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {

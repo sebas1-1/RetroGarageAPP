@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Input, Text } from "@rneui/themed";
 import { useRouter } from "expo-router";
@@ -12,7 +13,7 @@ import {
   View,
 } from "react-native";
 import { MessageDialog } from "../../components/shared/MessageDialog";
-import { Colors } from "../../constants/colors";
+import type { AppColors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Rol, usuariosService } from "../../services/usuariosService";
 import {
@@ -26,6 +27,7 @@ import {
 
 // Pantalla para crear un usuario administrativo.
 export default function NuevoUsuarioScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   const router = useRouter();
   const [guardando, setGuardando] = useState(false);
   const [roles, setRoles] = useState<Rol[]>([]);
@@ -389,7 +391,7 @@ export default function NuevoUsuarioScreen() {
 }
 
 // Estilos visuales del formulario de nuevo usuario.
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   header: {
     backgroundColor: Colors.primary,

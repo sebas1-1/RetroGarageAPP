@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Input, Text } from "@rneui/themed";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -13,7 +14,7 @@ import {
 } from "react-native";
 import { DatePickerField } from "../../components/shared/DatePickerField";
 import { MessageDialog } from "../../components/shared/MessageDialog";
-import { Colors } from "../../constants/colors";
+import type { AppColors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Auto, autosService } from "../../services/autosService";
 import { citasService } from "../../services/citasService";
@@ -28,6 +29,7 @@ interface Servicio {
 
 // Pantalla para modificar una cita existente sin crear una nueva.
 export default function EditarCitaScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -557,7 +559,7 @@ export default function EditarCitaScreen() {
 }
 
 // Estilos visuales del formulario de editar cita.
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {

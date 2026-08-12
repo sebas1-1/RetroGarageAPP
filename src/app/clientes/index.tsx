@@ -1,3 +1,4 @@
+import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Button, Card, Dialog, Input, Text } from "@rneui/themed";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -10,12 +11,13 @@ import {
 } from "react-native";
 
 import { MessageDialog } from "../../components/shared/MessageDialog";
-import { Colors } from "../../constants/colors";
+import type { AppColors } from "../../constants/colors";
 import { fs, sp } from "../../constants/responsive";
 import { Cliente, clientesService } from "../../services/clientesService";
 
 // Pantalla de clientes: muestra, busca y permite eliminar registros.
 export default function ClientesScreen() {
+  const { colors: Colors, styles } = useThemedStyles(createStyles);
   const router = useRouter();
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -236,7 +238,7 @@ export default function ClientesScreen() {
 }
 
 // Estilos visuales del listado de clientes.
-const styles = StyleSheet.create({
+const createStyles = (Colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream, padding: sp(16) },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   title: {

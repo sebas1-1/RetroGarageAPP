@@ -27,6 +27,11 @@ interface Pago {
   servicio: string | null;
 }
 
+const formatearMonto = (value: unknown) => {
+  const monto = Number(value);
+  return Number.isFinite(monto) ? monto.toLocaleString("es-CR") : "0";
+};
+
 const formatearFecha = (value: string) => {
   const fecha = new Date(value);
   if (Number.isNaN(fecha.getTime())) return "Fecha no disponible";
@@ -53,7 +58,7 @@ export default function PagosScreen() {
     try {
       setCargando(true);
       const data = await pagosService.getAll();
-      setPagos(data);
+      setPagos(Array.isArray(data) ? data : []);
     } catch (e: any) {
       setMessageDialog({ title: "Error", message: e.message });
     } finally {
@@ -70,6 +75,7 @@ export default function PagosScreen() {
 
   const iconoMetodo = (metodo: string) => {
     if (metodo === "Tarjeta") return "credit-card";
+    if (metodo === "PayPal") return "account-balance-wallet";
     return "phone-android";
   };
 
@@ -117,7 +123,7 @@ export default function PagosScreen() {
                   <MaterialIcons name="receipt" size={16} color={Colors.gray} />
                   <Text style={styles.factura}>{item.numero_factura}</Text>
                 </View>
-                <Text style={styles.monto}>₡{item.monto.toLocaleString()}</Text>
+                <Text style={styles.monto}>₡{formatearMonto(item.monto)}</Text>
               </View>
 
               <View style={styles.divider} />

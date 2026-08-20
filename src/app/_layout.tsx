@@ -22,7 +22,8 @@ function ThemedLayout() {
   return (
     <View style={{ flex: 1, backgroundColor: Colors.cream }}>
       <Tabs
-      screenOptions={{
+        backBehavior="history"
+        screenOptions={{
         // Estilos generales que comparten todas las opciones del menu.
         tabBarActiveTintColor: Colors.accent,
         tabBarInactiveTintColor: Colors.gray,

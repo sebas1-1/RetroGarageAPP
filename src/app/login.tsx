@@ -1,8 +1,8 @@
 import { useThemedStyles } from "@/contexts/AccessibilityThemeContext";
 import { Text } from "@rneui/themed";
 import { Image as ExpoImage } from "expo-image";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -18,7 +18,10 @@ import {
 import { MessageDialog } from "../components/shared/MessageDialog";
 import type { AppColors } from "../constants/colors";
 import { fs, sp } from "../constants/responsive";
-import { setCurrentUserId } from "../services/authSession";
+import {
+  getCurrentUserId,
+  setCurrentUserId,
+} from "../services/authSession";
 import { usuariosService } from "../services/usuariosService";
 import {
   getRetroAuthenticatorSecret,
@@ -48,6 +51,17 @@ export default function LoginScreen() {
   const router = useRouter();
   const { width, height } = useWindowDimensions();
   const isWideLayout = width >= 960;
+
+  // Protege tanto /login como el login renderizado dentro de la ruta inicial.
+  // Si el usuario ya se autentico, el boton Atras conserva la sesion y no
+  // vuelve a mostrar credenciales.
+  useFocusEffect(
+    useCallback(() => {
+      if (getCurrentUserId() !== null) {
+        router.replace("/dashboard" as any);
+      }
+    }, [router]),
+  );
 
   const [modo, setModo] = useState<"login" | "registro" | "recuperacion">(
     "login",
